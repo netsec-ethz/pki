@@ -1,0 +1,1 @@
+DEFAULT_CERT_VALIDITY = 120  # In days.
