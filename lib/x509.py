@@ -43,5 +43,5 @@ def create_x509cert(domain_name, pubkey, ca_cert, ca_privkey, exts=None):
     # Print the chain 
     pem = certificate.public_bytes(encoding=serialization.Encoding.PEM)
     pem += ca_cert.public_bytes(encoding=serialization.Encoding.PEM)
-    print(pem.decode('utf-8'))
+    return pem
 

@@ -1,34 +1,9 @@
 #!/usr/bin/python3
 import sys
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from cryptography.x509 import (load_pem_x509_certificate, CertificatePolicies,
-                               ObjectIdentifier, PolicyInformation)
-
-from lib.defines import POLICY_OID
+from lib.utils import (cert_from_file, policy_from_file,
+                       privkey_from_file, pubkey_from_file)
 from lib.x509 import create_x509cert
-
-def pubkey_from_file(path):
-    with open(path, "rb") as f:
-        return serialization.load_pem_public_key(f.read(),
-                                                 backend=default_backend())
-
-def privkey_from_file(path):
-    with open(path, "rb") as f:
-        return serialization.load_pem_private_key(f.read(), password=None,
-                                                  backend=default_backend())
-def cert_from_file(path):
-    with open(path, "rb") as f:
-        return load_pem_x509_certificate(f.read(), default_backend())
-
-def policy_from_file(path):
-    with open(path) as f:
-        policy = f.read()
-    # Set our policy extension as critical
-    is_critical = True
-    pi = PolicyInformation(ObjectIdentifier(POLICY_OID), [policy])
-    return CertificatePolicies([pi]), is_critical
 
 
 if __name__ == "__main__":
@@ -42,11 +17,14 @@ if __name__ == "__main__":
     policy_ext = policy_from_file(sys.argv[3])
     # Create certificates
     i = 4
+    pem = b""
     while i < len(sys.argv):
         ca_cert = cert_from_file(sys.argv[i])
         ca_privkey = privkey_from_file(sys.argv[i+1])
-        create_x509cert(domain, pubkey, ca_cert, ca_privkey, exts=[policy_ext])
+        pem += create_x509cert(domain, pubkey, ca_cert,
+                               ca_privkey, exts=[policy_ext])
         i += 2
+    print(pem.decode('utf-8'))
 
 
 
