@@ -40,7 +40,7 @@ def create_x509cert(domain_name, pubkey, ca_cert, ca_privkey, exts=None):
         builder = builder.add_extension(ext, critical=is_critical)
     certificate = builder.sign(private_key=ca_privkey,
         algorithm=hashes.SHA256(), backend=default_backend())
-    # Print the chain 
+    # Print the chain
     pem = certificate.public_bytes(encoding=serialization.Encoding.PEM)
     pem += ca_cert.public_bytes(encoding=serialization.Encoding.PEM)
     return pem
