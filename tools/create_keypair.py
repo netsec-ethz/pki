@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import sys
 
 from cryptography.hazmat.backends import default_backend
