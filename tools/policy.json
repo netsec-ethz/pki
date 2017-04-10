@@ -1,1 +1,1 @@
-{Some JSON here}
+{"POLICY_VERSION": 1, "FAIL_TLS_SEC": "soft", "CA_LIST": ["CA1", "CA2"], "LOG_TIMEOUT": 604800, "MAX_PATH_LEN": 4, "UP_CA_TH": 3, "FAIL_LOG_EXP": "hard", "CERT_SEC": "low", "EV_ONLY": false, "LOG_LIST": ["Log1", "Log2"], "FAIL_CERT_TH": "hard", "UP_COP_UNLINKED": 604800, "CERT_TH": 2, "TLS_SEC": "medium", "INHERITANCE": ["CA_LIST", "CERT_SEC", "FAIL_CERT_TH"], "UP_COP_UNTRUSTED": 604800, "UP_CA_MIN": 2, "FAIL_POL_VER": "soft", "REV_KEY": true, "WILDCARD_FORBIDDEN": false, "FAIL_LOG_PROOF": "hard", "MAX_LIFETIME": 94608000}
