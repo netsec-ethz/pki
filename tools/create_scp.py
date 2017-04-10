@@ -26,5 +26,3 @@ if __name__ == "__main__":
         i += 2
     print(pem.decode('utf-8'))
 
-
-

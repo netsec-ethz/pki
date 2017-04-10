@@ -22,9 +22,12 @@ def create_x509cert(domain_name, pubkey, ca_cert, ca_privkey, exts=None):
     one_day = datetime.timedelta(1, 0, 0)
     now = datetime.datetime.today()
     builder = x509.CertificateBuilder()
-    builder = builder.subject_name(x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, domain_name)]))
-    builder = builder.issuer_name(ca_cert.issuer)
+    x509_dn = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, domain_name)])
+    builder = builder.subject_name(x509_dn)
+    if ca_cert:
+        builder = builder.issuer_name(ca_cert.issuer)
+    else:  # When CA cert is not given, then it is self signed
+        builder = builder.issuer_name(x509_dn)
     builder = builder.not_valid_before(now - one_day)
     builder = builder.not_valid_after(now + one_day * DEFAULT_CERT_VALIDITY)
     builder = builder.serial_number(random_serial_number())
@@ -35,13 +38,14 @@ def create_x509cert(domain_name, pubkey, ca_cert, ca_privkey, exts=None):
         critical=False)
     builder = builder.add_extension(
         x509.BasicConstraints(ca=False, path_length=None), critical=True)
-    # Add passed extensions
+    # Add passed extensions (i.e., policy or policy binding)
     for (ext, is_critical) in exts or []:
         builder = builder.add_extension(ext, critical=is_critical)
     certificate = builder.sign(private_key=ca_privkey,
         algorithm=hashes.SHA256(), backend=default_backend())
     # Print the chain
     pem = certificate.public_bytes(encoding=serialization.Encoding.PEM)
-    pem += ca_cert.public_bytes(encoding=serialization.Encoding.PEM)
+    if ca_cert:
+        pem += ca_cert.public_bytes(encoding=serialization.Encoding.PEM)
     return pem
 
