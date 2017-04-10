@@ -11,16 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import base64
 import datetime
 import os
-
-from lib.defines import DEFAULT_CERT_VALIDITY
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509 import (load_pem_x509_certificate, CertificatePolicies,
+                               ObjectIdentifier, PolicyInformation)
 from cryptography.x509.oid import NameOID
+from OpenSSL import crypto
+
+from lib.defines import DEFAULT_CERT_VALIDITY, POLICY_BINDIND_OID, POLICY_OID
 
 
 def random_serial_number():
@@ -57,8 +61,72 @@ def create_x509cert(domain_name, pubkey, ca_cert, ca_privkey, exts=None):
     certificate = builder.sign(private_key=ca_privkey,
         algorithm=hashes.SHA256(), backend=default_backend())
     # return the chain
-    pem = certificate.public_bytes(encoding=serialization.Encoding.PEM)
+    chain = [certificate]
     if ca_cert:
-        pem += ca_cert.public_bytes(encoding=serialization.Encoding.PEM)
+        chain.append(ca_cert)
+    return certs_to_pem(chain)
+
+def verify_cert_chain(chain_pem, trusted_certs):
+    cert = crypto.load_certificate(crypto.FILETYPE_PEM, str(chain_pem))
+    # Build store of trusted certificates
+    store = crypto.X509Store()
+    for _cert in trusted_certs:
+        store.add_cert(_cert)
+    # Prepare context
+    ctx = crypto.X509StoreContext(store, cert)
+    # Start validation
+    try:
+        ctx.verify_certificate()
+        return True
+    except crypto.X509StoreContextError as e:
+        logging.error("Certificate validation failed: %s" % e)
+        return False
+
+def binding_from_pem(pem):
+    # Set binding as non-critical
+    is_critical = False
+    # Compute hash over the pem (all previous certificates)
+    digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+    digest.update(pem)
+    binding = base64.b64encode(digest.finalize()).decode('utf-8')
+    pi = x509.PolicyInformation(x509.ObjectIdentifier(POLICY_BINDIND_OID), [binding])
+    return CertificatePolicies([pi]), is_critical
+
+def pem_to_certs(pem):
+    sep = b'-----BEGIN CERTIFICATE-----\n'
+    ret = []
+    for cert in pem.split(sep)[1:]:  # skip the first, empty element
+        ret.append(load_pem_x509_certificate(sep + cert, default_backend()))
+    return ret
+
+def certs_to_pem(certs):
+    pem = b""
+    for cert in certs:
+        pem += cert.public_bytes(encoding=serialization.Encoding.PEM)
     return pem
 
+def get_cn(cert):
+    if cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME):
+        return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    return None
+
+def pubkey_from_file(path):
+    with open(path, "rb") as f:
+        return serialization.load_pem_public_key(f.read(),
+                                                 backend=default_backend())
+
+def privkey_from_file(path):
+    with open(path, "rb") as f:
+        return serialization.load_pem_private_key(f.read(), password=None,
+                                                  backend=default_backend())
+def cert_from_file(path):
+    with open(path, "rb") as f:
+        return load_pem_x509_certificate(f.read(), default_backend())
+
+def policy_from_file(path):
+    with open(path) as f:
+        policy = f.read()
+    # Set our policy extension as critical
+    is_critical = True
+    pi = PolicyInformation(ObjectIdentifier(POLICY_OID), [policy])
+    return CertificatePolicies([pi]), is_critical

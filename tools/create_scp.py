@@ -14,7 +14,7 @@
 # limitations under the License.
 import sys
 
-from lib.utils import (cert_from_file, policy_from_file,
+from lib.x509 import (cert_from_file, policy_from_file,
                        privkey_from_file, pubkey_from_file)
 from lib.x509 import create_x509cert
 

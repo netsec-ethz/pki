@@ -14,9 +14,8 @@
 # limitations under the License.
 import sys
 
-from lib.utils import (binding_from_pem, cert_from_file,
-                       privkey_from_file, pubkey_from_file)
-from lib.x509 import create_x509cert
+from lib.x509 import cert_from_file, privkey_from_file, pubkey_from_file
+from lib.x509 import binding_from_pem, create_x509cert
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ import logging
 
 from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
-from lib.utils import binding_from_pem, get_cn
+from lib.x509 import binding_from_pem, get_cn, verify_cert_chain
 
 
 class MSC(object):
@@ -52,10 +52,13 @@ class MSC(object):
             tmp.append("Chain: %s\n" % chain)
         return "".join(tmp)
 
-    def verify(self)
+    def verify(self):
         if not self.pre_validate():
             return False
-        pass
+        return True
+
+    def pre_validate(self):
+        return True
 
     def _verify_policy_binding_auth(self):
         pass
@@ -87,7 +90,7 @@ import sys
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 # from cryptography.x509 import load_pem_x509_certificate
-from lib.utils import pem_to_certs
+from lib.x509 import pem_to_certs
 if __name__ == "__main__":
     with open(sys.argv[1], "rb") as f:
         pem = f.read()
