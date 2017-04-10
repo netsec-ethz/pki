@@ -20,14 +20,14 @@ from lib.utils import binding_from_pem, get_cn
 
 
 class MSC(object):
-    pass
-
+    """
+    Multi-signature certificate
+    """
     def __init__(self, pem):
         self.pem = pem
         self.domain_name = ""
         self.chains = []
         self.policy_binding = []
-
         self._parse(pem)
 
     def _parse(self, pem):
@@ -52,16 +52,19 @@ class MSC(object):
             tmp.append("Chain: %s\n" % chain)
         return "".join(tmp)
 
-    def verify(self, trc, scp):
+    def verify(self)
+        if not self.pre_validate():
+            return False
         pass
 
-    def _verify_policy_binding(self):
+    def _verify_policy_binding_auth(self):
         pass
 
     def _verify_policy_binding_integrity(self):
         sep = b'-----BEGIN CERTIFICATE-----\n'
         # Skip the policy binding (the last element)
         pem = sep.join(self.pem.split(sep)[:-1])
+        # Generate policy binding from the pem
         pi, _ = binding_from_pem(pem)
         # Compare with the MSC's policy binding
         try:
@@ -73,10 +76,6 @@ class MSC(object):
 
 
     def _verify_against_trc(self, trc):
-        pass
-
-    def _verify_against_proof(self, trc):
-        # PSz: needed?
         pass
 
     def _verify_against_scp(self, scp):
@@ -94,4 +93,4 @@ if __name__ == "__main__":
         pem = f.read()
     msc = MSC(pem)
     print(msc)
-    print(msc._verify_policy_binding_integrity())
+    print(msc.verify())
