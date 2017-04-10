@@ -4,6 +4,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.x509 import (load_pem_x509_certificate, CertificatePolicies,
                                ObjectIdentifier, PolicyInformation)
+from cryptography.x509.oid import NameOID
 
 from lib.defines import POLICY_BINDIND_OID, POLICY_OID
 
@@ -37,3 +38,15 @@ def binding_from_pem(pem):
     binding = base64.b64encode(digest.finalize()).decode('utf-8')
     pi = PolicyInformation(ObjectIdentifier(POLICY_BINDIND_OID), [binding])
     return CertificatePolicies([pi]), is_critical
+
+def pem_to_certs(pem):
+    sep = b'-----BEGIN CERTIFICATE-----\n'
+    ret = []
+    for cert in pem.split(sep)[1:]:  # skip the first, empty element
+        ret.append(load_pem_x509_certificate(sep + cert, default_backend()))
+    return ret
+
+def get_cn(cert):
+    if cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME):
+        return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    return None
