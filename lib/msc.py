@@ -19,9 +19,9 @@ from lib.defines import SecLevel
 from lib.x509 import binding_from_pem, certs_to_pem, get_cn, pem_to_certs, verify_cert_chain
 
 
-class ChainVrfyResults(object):
+class VrfyResults(object):
     """
-    Helper class
+    Helper class for storing results of a successful chain verification.
     """
     def __init__(self, chain):
         self.ca = get_cn(chain[-1])
@@ -42,7 +42,7 @@ class ChainVrfyResults(object):
 
 class MSC(object):
     """
-    Multi-signature certificate
+    Multi-signature certificate.
     """
     def __init__(self, pem):
         self.pem = pem
@@ -115,5 +115,5 @@ class MSC(object):
         for chain in self.chains:
             pem = certs_to_pem(chain)
             if verify_cert_chain(pem, trusted_certs):
-                res.append(ChainVrfyResults(chain))
+                res.append(VrfyResults(chain))
         return res
