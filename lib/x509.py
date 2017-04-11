@@ -13,6 +13,7 @@
 # limitations under the License.
 import base64
 import datetime
+import logging
 import os
 
 from cryptography import x509
@@ -67,7 +68,7 @@ def create_x509cert(domain_name, pubkey, ca_cert, ca_privkey, exts=None):
     return certs_to_pem(chain)
 
 def verify_cert_chain(chain_pem, trusted_certs):
-    cert = crypto.load_certificate(crypto.FILETYPE_PEM, str(chain_pem))
+    cert = crypto.load_certificate(crypto.FILETYPE_PEM, chain_pem.decode('utf-8'))
     # Build store of trusted certificates
     store = crypto.X509Store()
     for _cert in trusted_certs:

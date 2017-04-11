@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 # Copyright 2017 ETH Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +15,18 @@ import logging
 
 from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
-from lib.x509 import binding_from_pem, get_cn, verify_cert_chain
+from lib.defines import SecLevel
+from lib.x509 import binding_from_pem, certs_to_pem, get_cn, pem_to_certs, verify_cert_chain
+
+
+class ChainVrfyResults(object):
+    """
+    Helper class
+    """
+    def __init__(self, ca, path_len, sec_lvl=SecLevel.MEDIUM):
+    # FIXME(PSz): define security levels for keys and algorithms
+        pass
+
 
 
 class MSC(object):
@@ -58,12 +68,15 @@ class MSC(object):
         return True
 
     def pre_validate(self):
-        return True
+        res = True
+        res &= self._verify_policy_binding_integrity()
+        return res
 
     def _verify_policy_binding_auth(self):
-        pass
+        return True
 
     def _verify_policy_binding_integrity(self):
+        print("_verify_policy_binding_integrity")
         sep = b'-----BEGIN CERTIFICATE-----\n'
         # Skip the policy binding (the last element)
         pem = sep.join(self.pem.split(sep)[:-1])
@@ -79,21 +92,18 @@ class MSC(object):
 
 
     def _verify_against_trc(self, trc):
-        pass
+        return True
 
     def _verify_against_scp(self, scp):
-        pass
+        return True
 
-
-# Test only
-import sys
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes, serialization
-# from cryptography.x509 import load_pem_x509_certificate
-from lib.x509 import pem_to_certs
-if __name__ == "__main__":
-    with open(sys.argv[1], "rb") as f:
-        pem = f.read()
-    msc = MSC(pem)
-    print(msc)
-    print(msc.verify())
+    def verify_chains(self, trusted_certs):
+        print("verify_chains")
+        res = []
+        for chain in self.chains:
+            pem = certs_to_pem(chain)
+            if verify_cert_chain(pem, trusted_certs):
+                print("OK")
+            else:
+                print("Failed")
+        return res

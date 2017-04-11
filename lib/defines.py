@@ -15,3 +15,9 @@
 DEFAULT_CERT_VALIDITY = 120  # In days.
 POLICY_OID = "1.2.34.56.1"
 POLICY_BINDIND_OID = "1.2.34.56.2"
+
+
+class SecLevel(object):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
