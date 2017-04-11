@@ -25,7 +25,7 @@ from cryptography.x509 import (load_pem_x509_certificate, CertificatePolicies,
 from cryptography.x509.oid import NameOID
 from OpenSSL import crypto
 
-from lib.defines import DEFAULT_CERT_VALIDITY, POLICY_BINDIND_OID, POLICY_OID
+from lib.defines import CERT_SEP, DEFAULT_CERT_VALIDITY, POLICY_BINDIND_OID, POLICY_OID
 
 
 def random_serial_number():
@@ -95,10 +95,9 @@ def binding_from_pem(pem):
     return CertificatePolicies([pi]), is_critical
 
 def pem_to_certs(pem):
-    sep = b'-----BEGIN CERTIFICATE-----\n'
     ret = []
-    for cert in pem.split(sep)[1:]:  # skip the first, empty element
-        ret.append(load_pem_x509_certificate(sep + cert, default_backend()))
+    for cert in pem.split(CERT_SEP)[1:]:  # skip the first, empty element
+        ret.append(load_pem_x509_certificate(CERT_SEP + cert, default_backend()))
     return ret
 
 def certs_to_pem(certs):

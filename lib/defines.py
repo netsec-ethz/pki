@@ -15,6 +15,7 @@
 DEFAULT_CERT_VALIDITY = 120  # In days.
 POLICY_OID = "1.2.34.56.1"
 POLICY_BINDIND_OID = "1.2.34.56.2"
+CERT_SEP = b'-----BEGIN CERTIFICATE-----\n'
 
 
 class SecLevel(object):

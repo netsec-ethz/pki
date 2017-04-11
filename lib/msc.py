@@ -15,7 +15,7 @@ import logging
 
 from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
-from lib.defines import SecLevel
+from lib.defines import CERT_SEP, SecLevel
 from lib.x509 import binding_from_pem, certs_to_pem, get_cn, pem_to_certs, verify_cert_chain
 
 
@@ -82,9 +82,8 @@ class MSC(object):
 
     def _verify_msc_integrity(self):
         print("_verify_msc_integrity")
-        sep = b'-----BEGIN CERTIFICATE-----\n'
         # Skip the policy binding (the last element)
-        pem = sep.join(self.pem.split(sep)[:-1])
+        pem = CERT_SEP.join(self.pem.split(CERT_SEP)[:-1])
         # Generate policy binding from the pem
         pi, _ = binding_from_pem(pem)
         # Compare with the MSC's policy binding
