@@ -103,7 +103,6 @@ class MSC(object):
         for chain in self.chains:
             pem = certs_to_pem(chain)
             if verify_cert_chain(pem, trusted_certs):
+                # TODO(PSz): create result
                 print("OK")
-            else:
-                print("Failed")
         return res

@@ -72,7 +72,8 @@ def verify_cert_chain(chain_pem, trusted_certs):
     # Build store of trusted certificates
     store = crypto.X509Store()
     for _cert in trusted_certs:
-        store.add_cert(_cert)
+        tmp = crypto.load_certificate(crypto.FILETYPE_PEM, _cert.decode('utf-8'))
+        store.add_cert(tmp)
     # Prepare context
     ctx = crypto.X509StoreContext(store, cert)
     # Start validation
