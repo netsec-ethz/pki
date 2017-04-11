@@ -23,10 +23,21 @@ class ChainVrfyResults(object):
     """
     Helper class
     """
-    def __init__(self, ca, path_len, sec_lvl=SecLevel.MEDIUM):
-    # FIXME(PSz): define security levels for keys and algorithms
-        pass
+    def __init__(self, chain):
+        self.ca = get_cn(chain[-1])
+        self.path_len = len(chain)
+        # TODO(PSz): derive the following
+        self.sec_lvl = SecLevel.MEDIUM
+        self.ev = False
+        self.valid_for = 12345
+        self.wildcard = False
 
+    def __repr__(self):
+        s = "<VrfyResult: "
+        s += "CA: %s, PathLen: %d, SecLvl: %s, EV: %s, ValidFor: %d, Wildcard: %s" %  (self.ca,
+            self.path_len, self.sec_lvl, self.ev, self.valid_for, self.wildcard)
+        s += ">"
+        return s
 
 
 class MSC(object):
@@ -44,6 +55,7 @@ class MSC(object):
         certs = pem_to_certs(pem)
         if not certs:
             return
+        # TODO(PSz): Check domain_name everywhere
         self.domain_name = get_cn(certs[0])
         self.policy_binding = certs[-1]  # The last cert is a policy binding
         # Parse certificate chains
@@ -103,6 +115,5 @@ class MSC(object):
         for chain in self.chains:
             pem = certs_to_pem(chain)
             if verify_cert_chain(pem, trusted_certs):
-                # TODO(PSz): create result
-                print("OK")
+                res.append(ChainVrfyResults(chain))
         return res
