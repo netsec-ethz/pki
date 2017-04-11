@@ -21,3 +21,8 @@ class SecLevel(object):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
+
+
+class FailCase(object):
+    SOFT = "soft"
+    HARD = "hard"
