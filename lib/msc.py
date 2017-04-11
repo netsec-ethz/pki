@@ -69,7 +69,7 @@ class MSC(object):
                 chain = []
         assert not chain  # TODO(PSz): unterminated chain, raise an exception
 
-    def __str__(self):
+    def __repr__(self):
         tmp = ["MSC\n"]
         tmp.append("Domain: %s\n" % self.domain_name)
         for chain in self.chains:
