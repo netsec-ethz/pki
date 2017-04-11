@@ -1,4 +1,5 @@
 #!/bin/bash
+# ln -s ~/path_to/scion/gen/CAS/ISD1/
 mkdir tmp
 cd tmp
 PYTHONPATH=../ ../tools/create_keypair.py a.com-scp
