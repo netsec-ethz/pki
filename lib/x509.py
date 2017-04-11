@@ -108,6 +108,7 @@ def certs_to_pem(certs):
     return pem
 
 def get_cn(cert):
+    # TODO(PSz): deprecate CN
     if cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME):
         return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
     return None

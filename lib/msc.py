@@ -50,6 +50,7 @@ class MSC(object):
         self.chains = []
         self.policy_binding = []
         self._parse(pem)
+        assert self._verify_msc_integrity()  # TODO(PSz): raise an exception
 
     def _parse(self, pem):
         certs = pem_to_certs(pem)
@@ -66,29 +67,21 @@ class MSC(object):
             if get_cn(cert) == self.domain_name:
                 self.chains.insert(0, chain)
                 chain = []
+        assert not chain  # TODO(PSz): unterminated chain, raise an exception
 
     def __str__(self):
         tmp = ["MSC\n"]
         tmp.append("Domain: %s\n" % self.domain_name)
         for chain in self.chains:
             tmp.append("Chain: %s\n" % chain)
+        tmp.append("Policy Binding: %s\n" % self.policy_binding)
         return "".join(tmp)
-
-    def verify(self):
-        if not self.pre_validate():
-            return False
-        return True
-
-    def pre_validate(self):
-        res = True
-        res &= self._verify_policy_binding_integrity()
-        return res
 
     def _verify_policy_binding_auth(self):
         return True
 
-    def _verify_policy_binding_integrity(self):
-        print("_verify_policy_binding_integrity")
+    def _verify_msc_integrity(self):
+        print("_verify_msc_integrity")
         sep = b'-----BEGIN CERTIFICATE-----\n'
         # Skip the policy binding (the last element)
         pem = sep.join(self.pem.split(sep)[:-1])
@@ -101,7 +94,6 @@ class MSC(object):
         except ExtensionNotFound:
             logging.error("Certificate binding not found.")
             return False
-
 
     def _verify_against_trc(self, trc):
         return True
