@@ -50,12 +50,17 @@ class Verifier(object):
         self.proof = proof
         self.trc = trc
 
-    def _trc_to_trusted(self):
+    def _get_trusted(self, use_policy=False):
         """
         Returns list of trusted certificates (PEM) from TRC.
+        List is filtered by policy if use_policy is True.
         """
         trusted = []
-        for der in self.trc.root_cas.values():
+        for ca, der in self.trc.root_cas.items():
+            if use_policy:
+                if ca not in self.scp.policy['CA_LIST']:
+                    logging.warning("%s not in %s" % (ca, self.scp.policy['CA_LIST']))
+                    continue
             # Convert DER to PEM
             trusted.append(certs_to_pem([cert_from_der(der)]))
         return trusted
@@ -86,7 +91,7 @@ class Verifier(object):
         """
         Verify whether SCP matches the TRC (trusted CAs and threshold number).
         """
-        trusted = self._trc_to_trusted()
+        trusted = self._get_trusted()
         # Verify certificate chains in SCP
         res = self.scp.verify_chains(trusted)
         # Check whether successful results are >= threshold
@@ -100,6 +105,11 @@ class Verifier(object):
         """
         Verify whether MSC matches the SCP and domain name.
         """
+        trusted = self._get_trusted(True)
+        # Verify certificate chains in MSC
+        res = self.msc.verify_chains(trusted)
+        print(res)
+        # TODO(PSz): here start validating res according to the policy
         # return (False, FailCase.SOFT)
         # return (False, FailCase.HARD)
         return (True, None)
