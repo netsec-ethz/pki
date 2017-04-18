@@ -37,19 +37,21 @@ class VrfyResults(object):
         s += ">"
         return s
 
+
 class Verifier(object):
     """
     Certificate verifier.
     """
 
-    def __init__(self, msc, scp, proof, trc):
+    def __init__(self, domain_name, msc, scp, proof, trc):
+        self.domain_name = domain_name
         self.msc = msc
         self.scp = scp
         self.proof = proof
         # TRC's part
         self.trc = trc
         self.trusted_certs = []
-        self.trusted_logs = []
+        self.trusted_logs = {}
         self.threshold = None
         self._process_trc(trc)
 
@@ -58,6 +60,37 @@ class Verifier(object):
         pass
 
     def verify(self):
+        """
+        Returns either (True, None) or (False, FailCase.SOFT) or (False, FailCase.HARD)
+        """
+        # First verify proofs
+        if not self._verify_proof():
+            return (False, FailCase.HARD)
+        if not self._verify_scp():
+            return (False, FailCase.HARD)
+        return self._verify_msc()
+
+
+        # return (False, FailCase.SOFT)
+        # return (False, FailCase.HARD)
+        return (True, None)
+
+    def _verify_proof(self):
+        """
+        Verify whether the proof is fresh and matches the MSC and SCP.
+        """
+        return True
+
+    def _verify_scp(self):
+        """
+        Verify whether SCP matches the TRC (trusted CAs and threshold number).
+        """
+        return True
+
+    def _verify_msc(self):
+        """
+        Verify whether MSC matches the SCP and domain name.
+        """
         # return (False, FailCase.SOFT)
         # return (False, FailCase.HARD)
         return (True, None)
