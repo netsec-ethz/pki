@@ -46,6 +46,7 @@ class Verifier(object):
     def __init__(self, domain_name, msc, scp, proof, trc):
         self.domain_name = domain_name
         self.msc = msc
+this must be multiple SCPS!
         self.scp = scp
         self.proof = proof
         self.trc = trc
@@ -105,11 +106,21 @@ class Verifier(object):
         """
         Verify whether MSC matches the SCP and domain name.
         """
+        # First check whether domain name matches
+        if self.domain_name != self.msc.domain_name:
+            logging.error("%s != %s" % (self.domain_name, self.msc.domain_name))
+            return (False, FailCase.HARD)
+
+        # Verify MSC's chains based on the SCP's trusted CAs
         trusted = self._get_trusted(True)
-        # Verify certificate chains in MSC
         res = self.msc.verify_chains(trusted)
         print(res)
+        params = self._determine_policy()
         # TODO(PSz): here start validating res according to the policy
         # return (False, FailCase.SOFT)
         # return (False, FailCase.HARD)
         return (True, None)
+
+    def _determine_policy(self):
+        # Determine final policy parameters, based on SCPs
+        return None
