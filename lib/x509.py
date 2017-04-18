@@ -26,7 +26,7 @@ from cryptography.x509 import (load_pem_x509_certificate, CertificatePolicies,
 from cryptography.x509.oid import NameOID
 from OpenSSL import crypto
 
-from lib.defines import CERT_SEP, DEFAULT_CERT_VALIDITY, POLICY_BINDIND_OID, POLICY_OID
+from pki.lib.defines import CERT_SEP, DEFAULT_CERT_VALIDITY, POLICY_BINDIND_OID, POLICY_OID
 
 
 def random_serial_number():

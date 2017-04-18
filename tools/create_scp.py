@@ -14,9 +14,8 @@
 # limitations under the License.
 import sys
 
-from lib.x509 import (cert_from_file, policy_from_file,
+from pki.lib.x509 import (cert_from_file, create_x509cert, policy_from_file,
                        privkey_from_file, pubkey_from_file)
-from lib.x509 import create_x509cert
 
 
 if __name__ == "__main__":

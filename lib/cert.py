@@ -15,9 +15,9 @@ import logging
 
 from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
-from lib.defines import CERT_SEP, SecLevel
-from lib.verifier import VrfyResults
-from lib.x509 import (binding_from_pem, certs_to_pem, get_cn, pem_to_certs,
+from pki.lib.defines import CERT_SEP, SecLevel
+from pki.lib.verifier import VrfyResults
+from pki.lib.x509 import (binding_from_pem, certs_to_pem, get_cn, pem_to_certs,
         policy_from_cert, verify_cert_chain)
 
 

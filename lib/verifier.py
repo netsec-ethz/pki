@@ -13,8 +13,8 @@
 # limitations under the License.
 import logging
 
-from lib.defines import FailCase
-from lib.x509 import get_cn
+from pki.lib.defines import FailCase, SecLevel
+from pki.lib.x509 import get_cn
 
 
 class VrfyResults(object):
