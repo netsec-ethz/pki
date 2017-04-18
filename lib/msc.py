@@ -48,7 +48,7 @@ class MSC(object):
         self.pem = pem
         self.domain_name = ""
         self.chains = []
-        self.policy_binding = []
+        self.policy_binding = None
         self._parse(pem)
         assert self._verify_msc_integrity()  # TODO(PSz): raise an exception
 
@@ -56,9 +56,10 @@ class MSC(object):
         certs = pem_to_certs(pem)
         if not certs:
             return
-        # TODO(PSz): Check domain_name everywhere
         self.domain_name = get_cn(certs[0])
         self.policy_binding = certs[-1]  # The last cert is a policy binding
+        # Check CN of policy binding
+        assert get_cn(self.policy_binding) == self.domain_name  # TODO(PSz): exception
         # Parse certificate chains
         chain = []
         for cert in reversed(certs[:-1]):
@@ -68,17 +69,6 @@ class MSC(object):
                 self.chains.insert(0, chain)
                 chain = []
         assert not chain  # TODO(PSz): unterminated chain, raise an exception
-
-    def __repr__(self):
-        tmp = ["MSC\n"]
-        tmp.append("Domain: %s\n" % self.domain_name)
-        for chain in self.chains:
-            tmp.append("Chain: %s\n" % chain)
-        tmp.append("Policy Binding: %s\n" % self.policy_binding)
-        return "".join(tmp)
-
-    def _verify_policy_binding_auth(self):
-        return True
 
     def _verify_msc_integrity(self):
         print("_verify_msc_integrity")
@@ -94,12 +84,6 @@ class MSC(object):
             logging.error("Certificate binding not found.")
             return False
 
-    def _verify_against_trc(self, trc):
-        return True
-
-    def _verify_against_scp(self, scp):
-        return True
-
     def verify_chains(self, trusted_certs):
         print("verify_chains")
         res = []
@@ -107,4 +91,12 @@ class MSC(object):
             pem = certs_to_pem(chain)
             if verify_cert_chain(pem, trusted_certs):
                 res.append(VrfyResults(chain))
-        return res
+        return res  # CAs might be non-unique
+
+    def __repr__(self):
+        tmp = ["MSC\n"]
+        tmp.append("Domain: %s\n" % self.domain_name)
+        for chain in self.chains:
+            tmp.append("Chain: %s\n" % chain)
+        tmp.append("Policy Binding: %s\n" % self.policy_binding)
+        return "".join(tmp)

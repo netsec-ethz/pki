@@ -13,6 +13,7 @@
 # limitations under the License.
 import base64
 import datetime
+import json
 import logging
 import os
 
@@ -21,7 +22,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509 import (load_pem_x509_certificate, CertificatePolicies,
-                               ObjectIdentifier, PolicyInformation)
+        ExtensionNotFound, ObjectIdentifier, PolicyInformation)
 from cryptography.x509.oid import NameOID
 from OpenSSL import crypto
 
@@ -29,7 +30,7 @@ from lib.defines import CERT_SEP, DEFAULT_CERT_VALIDITY, POLICY_BINDIND_OID, POL
 
 
 def random_serial_number():
-    # FIXME(PSz): can be replaced by x509.random_serial_numer() when we have
+    # FIXME(PSz): can be replaced by x509.random_serial_numer() when we have a
     # newer version of cryptography.io (>=1.6)
     return int.from_bytes(os.urandom(20), byteorder="big")
 
@@ -107,7 +108,7 @@ def certs_to_pem(certs):
     return pem
 
 def get_cn(cert):
-    # TODO(PSz): deprecate CN
+    # TODO(PSz): deprecate CN for leaf MSC certs
     if cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME):
         return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
     return None
@@ -132,3 +133,18 @@ def policy_from_file(path):
     is_critical = True
     pi = PolicyInformation(ObjectIdentifier(POLICY_OID), [policy])
     return CertificatePolicies([pi]), is_critical
+
+def policy_from_cert(cert):
+    if not cert.extensions:
+        return None
+    try:
+        exts = cert.extensions.get_extension_for_class(CertificatePolicies)
+        if not exts or not exts.value:
+            return None
+        for ext in exts.value:
+            if ext.policy_identifier == ObjectIdentifier(POLICY_OID):
+                if ext.policy_qualifiers:
+                    return json.loads(ext.policy_qualifiers[0])
+    except ExtensionNotFound:
+        pass
+    return None
