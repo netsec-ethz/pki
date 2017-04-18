@@ -21,8 +21,9 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509 import (load_pem_x509_certificate, CertificatePolicies,
-        ExtensionNotFound, ObjectIdentifier, PolicyInformation)
+from cryptography.x509 import (load_der_x509_certificate,
+        load_pem_x509_certificate, CertificatePolicies, ExtensionNotFound,
+        ObjectIdentifier, PolicyInformation)
 from cryptography.x509.oid import NameOID
 from OpenSSL import crypto
 
@@ -149,3 +150,6 @@ def policy_from_cert(cert):
             if ext.policy_qualifiers:
                 return json.loads(ext.policy_qualifiers[0])
     return None
+
+def cert_from_der(der):
+    return load_der_x509_certificate(der, default_backend())

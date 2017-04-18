@@ -14,7 +14,7 @@
 import logging
 
 from pki.lib.defines import FailCase, SecLevel
-from pki.lib.x509 import get_cn
+from pki.lib.x509 import get_cn, cert_from_der, certs_to_pem
 
 
 class VrfyResults(object):
@@ -48,16 +48,17 @@ class Verifier(object):
         self.msc = msc
         self.scp = scp
         self.proof = proof
-        # TRC's part
         self.trc = trc
-        self.trusted_certs = []
-        self.trusted_logs = {}
-        self.threshold = None
-        self._process_trc(trc)
 
-    def _process_trc(self, trc):
-        # TODO(PSz): set parameters
-        pass
+    def _trc_to_trusted(self):
+        """
+        Returns list of trusted certificates (PEM) from TRC.
+        """
+        trusted = []
+        for der in self.trc.root_cas.values():
+            # Convert DER to PEM
+            trusted.append(certs_to_pem([cert_from_der(der)]))
+        return trusted
 
     def verify(self):
         """
@@ -85,6 +86,14 @@ class Verifier(object):
         """
         Verify whether SCP matches the TRC (trusted CAs and threshold number).
         """
+        trusted = self._trc_to_trusted()
+        # Verify certificate chains in SCP
+        res = self.scp.verify_chains(trusted)
+        # Check whether successful results are >= threshold
+        print(res)
+        if len(res) < self.trc.quorum_eepki:
+            logging.error("quroum_eepki not satisfied: %d < %d" % (len(res), self.trc.quorum_eepki))
+            return False
         return True
 
     def _verify_msc(self):
