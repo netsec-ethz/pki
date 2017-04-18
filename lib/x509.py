@@ -139,12 +139,13 @@ def policy_from_cert(cert):
         return None
     try:
         exts = cert.extensions.get_extension_for_class(CertificatePolicies)
-        if not exts or not exts.value:
-            return None
-        for ext in exts.value:
-            if ext.policy_identifier == ObjectIdentifier(POLICY_OID):
-                if ext.policy_qualifiers:
-                    return json.loads(ext.policy_qualifiers[0])
     except ExtensionNotFound:
-        pass
+        return None
+    if not exts or not exts.value:
+        return None
+
+    for ext in exts.value:
+        if ext.policy_identifier == ObjectIdentifier(POLICY_OID):
+            if ext.policy_qualifiers:
+                return json.loads(ext.policy_qualifiers[0])
     return None
