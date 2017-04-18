@@ -41,16 +41,43 @@ class VrfyResults(object):
         return s
 
 
-class MSC(object):
+class EECert(object):
     """
-    Multi-signature certificate.
+    Generic class for EE certificate.
     """
     def __init__(self, pem):
         self.pem = pem
         self.domain_name = ""
         self.chains = []
-        self.policy_binding = None
         self._parse(pem)
+
+    def _parse(self, pem):
+        pass
+
+    def verify_chains(self, trusted_certs):
+        print("verify_chains")
+        res = []
+        for chain in self.chains:
+            pem = certs_to_pem(chain)
+            if verify_cert_chain(pem, trusted_certs):
+                res.append(VrfyResults(chain))
+        return res
+
+    def __repr__(self):
+        tmp = ["Domain: %s\n" % self.domain_name]
+        for chain in self.chains:
+            tmp.append("Chain: %s\n" % chain)
+        # tmp.append("Policy: %s\n" % self.policy)
+        return "".join(tmp)
+
+
+class MSC(EECert):
+    """
+    Multi-signature certificate.
+    """
+    def __init__(self, pem):
+        self.policy_binding = None
+        super().__init__(pem)
         assert self._verify_msc_integrity()  # TODO(PSz): raise an exception
 
     def _parse(self, pem):
@@ -85,34 +112,20 @@ class MSC(object):
             logging.error("Certificate binding not found.")
             return False
 
-    def verify_chains(self, trusted_certs):
-        print("verify_chains")
-        res = []
-        for chain in self.chains:
-            pem = certs_to_pem(chain)
-            if verify_cert_chain(pem, trusted_certs):
-                res.append(VrfyResults(chain))
-        return res  # CAs might be non-unique
-
     def __repr__(self):
         tmp = ["MSC\n"]
-        tmp.append("Domain: %s\n" % self.domain_name)
-        for chain in self.chains:
-            tmp.append("Chain: %s\n" % chain)
+        tmp.append(super().__repr__())
         tmp.append("Policy Binding: %s\n" % self.policy_binding)
         return "".join(tmp)
 
 
-class SCP(object):
+class SCP(EECert):
     """
     Subject certificate policy.
     """
     def __init__(self, pem):
-        self.pem = pem
-        self.domain_name = ""
-        self.chains = []
         self.policy = b""
-        self._parse(pem)
+        super().__init__(pem)
 
     def _parse(self, pem):
         certs = pem_to_certs(pem)
@@ -133,19 +146,8 @@ class SCP(object):
                 chain = []
         assert not chain  # TODO(PSz): unterminated chain, raise an exception
 
-    def verify_chains(self, trusted_certs):
-        print("verify_chains")
-        res = []
-        for chain in self.chains:
-            pem = certs_to_pem(chain)
-            if verify_cert_chain(pem, trusted_certs):
-                res.append(VrfyResults(chain))
-        return res  # CAs might be non-unique
-
     def __repr__(self):
         tmp = ["SCP\n"]
-        tmp.append("Domain: %s\n" % self.domain_name)
-        for chain in self.chains:
-            tmp.append("Chain: %s\n" % chain)
+        tmp.append(super().__repr__())
         tmp.append("Policy: %s\n" % self.policy)
         return "".join(tmp)
