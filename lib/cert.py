@@ -16,29 +16,9 @@ import logging
 from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
 from lib.defines import CERT_SEP, SecLevel
+from lib.verifier import VrfyResults
 from lib.x509 import (binding_from_pem, certs_to_pem, get_cn, pem_to_certs,
         policy_from_cert, verify_cert_chain)
-
-
-class VrfyResults(object):
-    """
-    Helper class for storing results of a successful chain verification.
-    """
-    def __init__(self, chain):
-        self.ca = get_cn(chain[-1])
-        self.path_len = len(chain)
-        # TODO(PSz): derive the following
-        self.sec_lvl = SecLevel.MEDIUM
-        self.ev = False
-        self.valid_for = 12345
-        self.wildcard = False
-
-    def __repr__(self):
-        s = "<VrfyResult: "
-        s += "CA: %s, PathLen: %d, SecLvl: %s, EV: %s, ValidFor: %d, Wildcard: %s" %  (self.ca,
-            self.path_len, self.sec_lvl, self.ev, self.valid_for, self.wildcard)
-        s += ">"
-        return s
 
 
 class EECert(object):
