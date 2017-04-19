@@ -99,6 +99,7 @@ class Verifier(object):
         Verify whether SCPs matches the TRC (trusted CAs and threshold number).
         """
         trusted = self._get_trusted()
+        tmp_name = "." + self.domain_name
         for scp in self.scps:
             # Verify certificate chains in SCP
             res = scp.verify_chains(trusted)
@@ -108,6 +109,11 @@ class Verifier(object):
                 logging.error("quroum_eepki not satisfied: %d < %d for %s" %
                               (len(res), self.trc.quorum_eepki, scp))
                 return False
+            # Check domain names and their order
+            if ("." + scp.domain_name) not in tmp_name:
+                logging.error("incorrect domain name or its order: %s" % scp.domain_name)
+                return False
+            tmp = "." + scp.domain_name 
         return True
 
     def _verify_msc(self):
