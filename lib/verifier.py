@@ -113,7 +113,7 @@ class Verifier(object):
             if ("." + scp.domain_name) not in tmp_name:
                 logging.error("incorrect domain name or its order: %s" % scp.domain_name)
                 return False
-            tmp = "." + scp.domain_name 
+            tmp = "." + scp.domain_name
         return True
 
     def _verify_msc(self):
