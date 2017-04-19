@@ -40,14 +40,13 @@ class VrfyResults(object):
 
 class Verifier(object):
     """
-    Certificate verifier.
+    MSC and SCP verifier.
     """
 
-    def __init__(self, domain_name, msc, scp, proof, trc):
+    def __init__(self, domain_name, msc, scps, proof, trc):
         self.domain_name = domain_name
         self.msc = msc
-this must be multiple SCPS!
-        self.scp = scp
+        self.scps = scps
         self.proof = proof
         self.trc = trc
 
@@ -66,6 +65,13 @@ this must be multiple SCPS!
             trusted.append(certs_to_pem([cert_from_der(der)]))
         return trusted
 
+    def _get_scps_cas(self):
+        res = set()
+        for scp in self.scps:
+            if 'CA_LIST' in scp.policy:
+                res.update(scp.policy['CA_LIST'])
+        return update
+
     def verify(self):
         """
         Returns either (True, None) or (False, FailCase.SOFT) or (False, FailCase.HARD)
@@ -73,7 +79,7 @@ this must be multiple SCPS!
         # First verify proofs
         if not self._verify_proof():
             return (False, FailCase.HARD)
-        if not self._verify_scp():
+        if not self._verify_scps():
             return (False, FailCase.HARD)
         return self._verify_msc()
 
@@ -88,18 +94,20 @@ this must be multiple SCPS!
         """
         return True
 
-    def _verify_scp(self):
+    def _verify_scps(self):
         """
-        Verify whether SCP matches the TRC (trusted CAs and threshold number).
+        Verify whether SCPs matches the TRC (trusted CAs and threshold number).
         """
         trusted = self._get_trusted()
-        # Verify certificate chains in SCP
-        res = self.scp.verify_chains(trusted)
-        # Check whether successful results are >= threshold
-        print(res)
-        if len(res) < self.trc.quorum_eepki:
-            logging.error("quroum_eepki not satisfied: %d < %d" % (len(res), self.trc.quorum_eepki))
-            return False
+        for scp in self.scps:
+            # Verify certificate chains in SCP
+            res = scp.verify_chains(trusted)
+            # Check whether successful results are >= threshold
+            print(res)
+            if len(res) < self.trc.quorum_eepki:
+                logging.error("quroum_eepki not satisfied: %d < %d for %s" %
+                              (len(res), self.trc.quorum_eepki, scp))
+                return False
         return True
 
     def _verify_msc(self):
