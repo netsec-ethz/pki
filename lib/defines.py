@@ -19,14 +19,14 @@ CERT_SEP = b'-----BEGIN CERTIFICATE-----\n'
 
 
 class SecLevel(object):
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
+    LOW = 0
+    MEDIUM = 1
+    HIGH = 2
 
 
 class FailCase(object):
-    SOFT = "soft"
-    HARD = "hard"
+    SOFT = 0
+    HARD = 1
 
 
 class PolicyFields(object):
@@ -52,6 +52,14 @@ class PolicyFields(object):
     FAIL_POL_VER = 'FAIL_POL_VER'
     FAIL_LOG_PROOF = 'FAIL_LOG_PROOF'
     INHERITANCE = 'INHERITANCE'
+    # Categorized sets (helpful in parameters inheritance)
+    INTERSECT_SET = [LOG_LIST, CA_LIST]
+    LESS_SET = [CERT_TH, CERT_SEC, TLS_SEC, FAIL_CERT_TH, FAIL_TLS_SEC,
+                FAIL_LOG_EXP, FAIL_POL_VER, UP_CA_MIN, UP_CA_TH, UP_COP_UNLINKED,
+                UP_COP_UNTRUSTED]
+    MORE_SET = [LOG_TIMEOUT, MAX_PATH_LEN, MAX_LIFETIME]
+    BOOL_SET = [EV_ONLY, WILDCARD_FORBIDDEN]
+
 
 DAY = 3600*24
 DEFAULT_POLICY = {
@@ -66,16 +74,16 @@ DEFAULT_POLICY = {
         PolicyFields.WILDCARD_FORBIDDEN: False,
         PolicyFields.MAX_LIFETIME: DAY*365*3,
         PolicyFields.CERT_SEC: SecLevel.LOW,
-        PolicyFields.TLS_SEC: SecLevel.MEDIUM,
+        PolicyFields.TLS_SEC: SecLevel.LOW,
         PolicyFields.UP_CA_MIN: 1,
         PolicyFields.UP_CA_TH: 1,
         PolicyFields.UP_COP_UNTRUSTED: DAY*7,
         PolicyFields.UP_COP_UNLINKED: DAY*7,
-        PolicyFields.FAIL_CERT_TH: FailCase.HARD,
+        PolicyFields.FAIL_CERT_TH: FailCase.SOFT,
         PolicyFields.FAIL_TLS_SEC: FailCase.SOFT,
-        PolicyFields.FAIL_LOG_EXP: FailCase.HARD,
+        PolicyFields.FAIL_LOG_EXP: FailCase.SOFT,
         PolicyFields.FAIL_POL_VER: FailCase.SOFT,
-        PolicyFields.FAIL_LOG_PROOF: FailCase.HARD,
+        PolicyFields.FAIL_LOG_PROOF: FailCase.SOFT,
         PolicyFields.INHERITANCE: [],
         }
 

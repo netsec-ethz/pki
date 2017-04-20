@@ -11,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import logging
 
-from pki.lib.defines import FailCase, SecLevel
+from pki.lib.defines import DEFAULT_POLICY, FailCase, SecLevel, PolicyFields as PF
 from pki.lib.x509 import get_cn, cert_from_der, certs_to_pem
 
 
 class VrfyResults(object):
+    # TODO(PSz): rename to chain property and move to x509?
     """
     Helper class for storing results of a successful chain verification.
     """
@@ -136,5 +138,45 @@ class Verifier(object):
         return (True, None)
 
     def _determine_policy(self):
-        # Determine final policy parameters, based on SCPs
-        return None
+        """
+        Determine final policy parameters for domain, based on SCPs and TRC
+        """
+        p = self._get_default_policy()
+        if not self.scps:
+            return p
+        # Copy domain's policy (if exists)
+        if self.domain_name == self.scps[0].domain_name:
+            for key, value in self.scps[0].policy.items():
+                p[key] = value
+        # Inherit values from other policies
+        for scp in self.scps[1:]:
+            inherit_params(p, scp.policy)
+        return p
+
+    def _get_default_policy(self):
+        # Take template and populate it by CAs and logs from TRC
+        p = copy.copy(DEFAULT_POLICY)
+        p[PF.CA_LIST] = self.trc.root_cas.keys()
+        p[PF.PKI_LOGS] = self.trc.pki_logs.keys()
+        return p
+
+def inherit_params(p, upper_policy):
+    """
+    Modifies p according to inheritance parameters of upper_policy
+    """
+    if PF.INHERITANCE not in upper_policy:
+        return
+    # Something to inherit
+    for key in upper_policy[PF.INHERITANCE]:
+        if key in PF.INTERSECT_SET:  # Inherit set elements (i.e., output intersection)
+            p[key] = list(set(p[key]).intersection(upper_policy[key]))
+        elif key in PF.LESS_SET:  # Inherit higher parameter
+            if p[key] < upper_policy[key]:
+                p[key] = upper_policy[key]
+        elif key in PF.MORE_SET:  # Inherit lower parameter
+            if p[key] > upper_policy[key]:
+                p[key] = upper_policy[key]
+        elif key in PF.BOOL_SET:
+            if upper_policy[key]:
+                p[key] = upper_policy[key]
+    return
