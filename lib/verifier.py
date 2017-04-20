@@ -44,8 +44,7 @@ class Verifier(object):
     """
     MSC and SCP verifier.
     """
-
-    def __init__(self, domain_name, msc, scps, proof, trc):
+    def __init__(self, domain_name, msc, scps, proof, trc):  # TODO(PSz): TLS sec
         self.domain_name = domain_name
         self.msc = msc
         self.scps = scps
@@ -78,7 +77,7 @@ class Verifier(object):
         """
         Returns either (True, None) or (False, FailCase.SOFT) or (False, FailCase.HARD)
         """
-        # First verify proofs
+        # First pre-validate
         if not self._verify_proof():
             return (False, FailCase.HARD)
         if not self._verify_scps():
@@ -159,6 +158,7 @@ class Verifier(object):
         p[PF.CA_LIST] = self.trc.root_cas.keys()
         p[PF.PKI_LOGS] = self.trc.pki_logs.keys()
         return p
+
 
 def inherit_params(p, upper_policy):
     """
