@@ -34,13 +34,30 @@ def _get_trusted_pems(trc, ca_list=None):
 
 def verify(domain_name, msc, scps, proof, trc, tls_sec):
     # First pre-validate
+    if domain_name != msc.domain_name:  # TODO(PSz): handle multiple DNs
+        logging.error("Domain name mismatch: %s != %s" % (domain_name, msc.domain_name))
+        return ValidationResult.HARDFAIL
     if not _verify_proof(msc, scps, proof):
+        logging.error("Proof verification failed")
         return ValidationResult.HARDFAIL
     if not _verify_scps(domain_name, scps, trc):
+        logging.error("SCPs verification failed")
         return ValidationResult.HARDFAIL
-    return _verify_msc()
-
-    return ValidationResult.ACCEPT
+    # Determine the final policy
+    p = _determine_policy(domain_name, scps, trc)
+    results = [ValidationResult.ACCEPT]  # Accepted if no error will occur
+    if not _verify_msc(domain_name, msc, p, trc):
+        logging.warning("_verify_msc(): CERT_TH not met")
+        results.append(p[PF.FAIL_CERT_TH])
+    if tls_sec < p[PF.TLS_SEC]:
+        results.append(p[PF.FAIL_TLS_SEC])
+    if False:  # TODO(PSz): if proof.is_expired():
+        results.append(p[PF.FAIL_PROOF_EXP])
+    if False:  # TODO(PSz): if proof.log not in p[PF.LOG_LIST]:
+        results.append(p[PF.FAIL_LOG])
+    # Return the most severe result
+    print(results)
+    return max(results)
 
 def _verify_proof(msc, scps, proof):
     """
@@ -70,7 +87,7 @@ def _verify_scps(domain_name, scps, trc):
         tmp = "." + scp.domain_name
     return True
 
-def _verify_msc(domain_name, msc, scps, trc):
+def _verify_msc(domain_name, msc, p, trc):
     """
     Verify whether MSC matches the SCP and domain name.
     """
@@ -79,14 +96,22 @@ def _verify_msc(domain_name, msc, scps, trc):
         logging.error("%s != %s" % (domain_name, msc.domain_name))
         return (False, ValidationResult.HARDFAIL)
 
-    # Determine the final policy
-    p = _determine_policy(domain_name, scps, trc)
     # Verify MSC's chains based on the SCP's trusted CAs
     trusted = _get_trusted_pems(trc, p[PF.CA_LIST])
-    res = msc.verify_chains(trusted)
-    print(res)
-    # TODO(PSz): here start validating res according to the policy
-    return ValidationResult.ACCEPT
+    # Get list of ValidationResults for successfuly validated chains
+    results = msc.verify_chains(trusted)
+    print(results)
+    # Validate results according to the policy
+    s = set()
+    for res in results:
+        if (res.sec_lvl < p[PF.CERT_SEC] or res.path_len > p[PF.MAX_PATH_LEN] or
+            res.valid_for > p[PF.MAX_LIFETIME] or
+            (not res.ev and p[PF.EV_ONLY]) or
+            (res.wildcard and p[PF.WILDCARD_FORBIDDEN])):
+            continue
+        s.add(res.ca)
+    print(s)
+    return len(s) >= p[PF.CERT_TH]
 
 def _determine_policy(domain_name, scps, trc):
     """
@@ -108,7 +133,7 @@ def _get_default_policy(trc):
     # Take template and populate it by CAs and logs from TRC
     p = copy.copy(DEFAULT_POLICY)
     p[PF.CA_LIST] = trc.root_cas.keys()
-    p[PF.PKI_LOGS] = trc.pki_logs.keys()
+    p[PF.LOG_LIST] = trc.pki_logs.keys()
     return p
 
 def inherit_params(p, upper_policy):

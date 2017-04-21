@@ -49,14 +49,14 @@ class PolicyFields(object):
     UP_COP_UNLINKED = 'UP_COP_UNLINKED'
     FAIL_CERT_TH = 'FAIL_CERT_TH'
     FAIL_TLS_SEC = 'FAIL_TLS_SEC'
-    FAIL_LOG_EXP = 'FAIL_LOG_EXP'
+    FAIL_PROOF_EXP = 'FAIL_PROOF_EXP'
     FAIL_POL_VER = 'FAIL_POL_VER'
-    FAIL_LOG_PROOF = 'FAIL_LOG_PROOF'
+    FAIL_LOG = 'FAIL_LOG'
     INHERITANCE = 'INHERITANCE'
     # Categorized sets (helpful in parameters inheritance)
     INTERSECT_SET = [LOG_LIST, CA_LIST]
     LESS_SET = [CERT_TH, CERT_SEC, TLS_SEC, FAIL_CERT_TH, FAIL_TLS_SEC,
-                FAIL_LOG_EXP, FAIL_POL_VER, UP_CA_MIN, UP_CA_TH, UP_COP_UNLINKED,
+                FAIL_PROOF_EXP, FAIL_POL_VER, UP_CA_MIN, UP_CA_TH, UP_COP_UNLINKED,
                 UP_COP_UNTRUSTED]
     MORE_SET = [LOG_TIMEOUT, MAX_PATH_LEN, MAX_LIFETIME]
     BOOL_SET = [EV_ONLY, WILDCARD_FORBIDDEN]
@@ -82,9 +82,9 @@ DEFAULT_POLICY = {
         PolicyFields.UP_COP_UNLINKED: DAY*7,
         PolicyFields.FAIL_CERT_TH: ValidationResult.SOFTFAIL,
         PolicyFields.FAIL_TLS_SEC: ValidationResult.SOFTFAIL,
-        PolicyFields.FAIL_LOG_EXP: ValidationResult.SOFTFAIL,
+        PolicyFields.FAIL_PROOF_EXP: ValidationResult.SOFTFAIL,
         PolicyFields.FAIL_POL_VER: ValidationResult.SOFTFAIL,
-        PolicyFields.FAIL_LOG_PROOF: ValidationResult.SOFTFAIL,
+        PolicyFields.FAIL_LOG: ValidationResult.SOFTFAIL,
         PolicyFields.INHERITANCE: [],
         }
 
