@@ -28,6 +28,8 @@ class FailCase(object):
     SOFT = 0
     HARD = 1
 
+class ValidationResult(FailCase):
+    ACCEPT = 3
 
 class PolicyFields(object):
     POLICY_VERSION = 'POLICY_VERSION'

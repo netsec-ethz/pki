@@ -14,7 +14,7 @@
 import copy
 import logging
 
-from pki.lib.defines import DEFAULT_POLICY, FailCase, SecLevel, PolicyFields as PF
+from pki.lib.defines import DEFAULT_POLICY, ValidationResult, SecLevel, PolicyFields as PF
 from pki.lib.x509 import get_cn, cert_from_der, certs_to_pem
 
 
@@ -40,125 +40,98 @@ class VrfyResults(object):
         return s
 
 
-class Verifier(object):
+def _get_trusted_pems(trc, ca_list=None):
     """
-    MSC and SCP verifier.
+    Returns list of trusted certificates (PEM) from TRC.
+    List is filtered by ca_list (if set).
     """
-    def __init__(self, domain_name, msc, scps, proof, trc):  # TODO(PSz): TLS sec
-        self.domain_name = domain_name
-        self.msc = msc
-        self.scps = scps
-        self.proof = proof
-        self.trc = trc
+    pems = []
+    for ca, der in trc.root_cas.items():
+        if (ca_list is not None) and (ca not in ca_list):
+            logging.warning("%s not in %s" % (ca, ca_list))
+            continue
+        # Convert DER to PEM
+        pems.append(certs_to_pem([cert_from_der(der)]))
+    return pems
 
-    def _get_trusted(self, use_policy=False):
-        """
-        Returns list of trusted certificates (PEM) from TRC.
-        List is filtered by policy if use_policy is True.
-        """
-        trusted = []
-        for ca, der in self.trc.root_cas.items():
-            if use_policy:
-                if ca not in self.scp.policy['CA_LIST']:
-                    logging.warning("%s not in %s" % (ca, self.scp.policy['CA_LIST']))
-                    continue
-            # Convert DER to PEM
-            trusted.append(certs_to_pem([cert_from_der(der)]))
-        return trusted
+def verify(domain_name, msc, scps, proof, trc, tls_sec):
+    # First pre-validate
+    if not _verify_proof(msc, scps, proof):
+        return ValidationResult.HARD
+    if not _verify_scps():
+        return ValidationResult.HARD
+    return _verify_msc()
 
-    def _get_scps_cas(self):
-        res = set()
-        for scp in self.scps:
-            if 'CA_LIST' in scp.policy:
-                res.update(scp.policy['CA_LIST'])
-        return update
+    return ValidationResult.ACCEPT
 
-    def verify(self):
-        """
-        Returns either (True, None) or (False, FailCase.SOFT) or (False, FailCase.HARD)
-        """
-        # First pre-validate
-        if not self._verify_proof():
-            return (False, FailCase.HARD)
-        if not self._verify_scps():
-            return (False, FailCase.HARD)
-        return self._verify_msc()
+def _verify_proof(msc, scps, proof):
+    """
+    Verify whether the proof is fresh and matches the MSC and SCP.
+    """
+    return True
 
-
-        # return (False, FailCase.SOFT)
-        # return (False, FailCase.HARD)
-        return (True, None)
-
-    def _verify_proof(self):
-        """
-        Verify whether the proof is fresh and matches the MSC and SCP.
-        """
-        return True
-
-    def _verify_scps(self):
-        """
-        Verify whether SCPs matches the TRC (trusted CAs and threshold number).
-        """
-        trusted = self._get_trusted()
-        tmp_name = "." + self.domain_name
-        for scp in self.scps:
-            # Verify certificate chains in SCP
-            res = scp.verify_chains(trusted)
-            # Check whether successful results are >= threshold
-            print(res)
-            if len(res) < self.trc.quorum_eepki:
-                logging.error("quroum_eepki not satisfied: %d < %d for %s" %
-                              (len(res), self.trc.quorum_eepki, scp))
-                return False
-            # Check domain names and their order
-            if ("." + scp.domain_name) not in tmp_name:
-                logging.error("incorrect domain name or its order: %s" % scp.domain_name)
-                return False
-            tmp = "." + scp.domain_name
-        return True
-
-    def _verify_msc(self):
-        """
-        Verify whether MSC matches the SCP and domain name.
-        """
-        # First check whether domain name matches
-        if self.domain_name != self.msc.domain_name:
-            logging.error("%s != %s" % (self.domain_name, self.msc.domain_name))
-            return (False, FailCase.HARD)
-
-        # Verify MSC's chains based on the SCP's trusted CAs
-        trusted = self._get_trusted(True)
-        res = self.msc.verify_chains(trusted)
+def _verify_scps(domain_name, scps, trc):
+    """
+    Verify whether SCPs matches the TRC (trusted CAs and threshold number).
+    """
+    trusted = _get_trusted_pems(trc)
+    tmp_name = "." + domain_name
+    for scp in scps:
+        # Verify certificate chains in SCP
+        res = scp.verify_chains(trusted)
+        # Check whether successful results are >= threshold
         print(res)
-        params = self._determine_policy()
-        # TODO(PSz): here start validating res according to the policy
-        # return (False, FailCase.SOFT)
-        # return (False, FailCase.HARD)
-        return (True, None)
+        if len(res) < trc.quorum_eepki:
+            logging.error("quroum_eepki not satisfied: %d < %d for %s" %
+                          (len(res), trc.quorum_eepki, scp))
+            return False
+        # Check domain names and their order
+        if ("." + scp.domain_name) not in tmp_name:
+            logging.error("incorrect domain name or its order: %s" % scp.domain_name)
+            return False
+        tmp = "." + scp.domain_name
+    return True
 
-    def _determine_policy(self):
-        """
-        Determine final policy parameters for domain, based on SCPs and TRC
-        """
-        p = self._get_default_policy()
-        if not self.scps:
-            return p
-        # Copy domain's policy (if exists)
-        if self.domain_name == self.scps[0].domain_name:
-            for key, value in self.scps[0].policy.items():
-                p[key] = value
-        # Inherit values from other policies
-        for scp in self.scps[1:]:
-            inherit_params(p, scp.policy)
+def _verify_msc(domain_name, msc, scps, trc):
+    """
+    Verify whether MSC matches the SCP and domain name.
+    """
+    # First check whether domain name matches
+    if domain_name != msc.domain_name:
+        logging.error("%s != %s" % (domain_name, msc.domain_name))
+        return (False, FailCase.HARD)
+
+    # Determine the final policy
+    p = _determine_policy(domain_name, scps, trc)
+    # Verify MSC's chains based on the SCP's trusted CAs
+    trusted = _get_trusted_pems(trc, p[PF.CA_LIST])
+    res = msc.verify_chains(trusted)
+    print(res)
+    # TODO(PSz): here start validating res according to the policy
+    return ValidationResult.ACCEPT
+
+def _determine_policy(domain_name, scps, trc):
+    """
+    Determine final policy parameters for domain, based on SCPs and TRC
+    """
+    p = _get_default_policy(trc)
+    if not scps:
         return p
+    # Copy domain's policy (if exists)
+    if domain_name == scps[0].domain_name:
+        for key, value in scps[0].policy.items():
+            p[key] = value
+    # Inherit values from other policies
+    for scp in scps[1:]:
+        inherit_params(p, scp.policy)
+    return p
 
-    def _get_default_policy(self):
-        # Take template and populate it by CAs and logs from TRC
-        p = copy.copy(DEFAULT_POLICY)
-        p[PF.CA_LIST] = self.trc.root_cas.keys()
-        p[PF.PKI_LOGS] = self.trc.pki_logs.keys()
-        return p
-
+def _get_default_policy(trc):
+    # Take template and populate it by CAs and logs from TRC
+    p = copy.copy(DEFAULT_POLICY)
+    p[PF.CA_LIST] = trc.root_cas.keys()
+    p[PF.PKI_LOGS] = trc.pki_logs.keys()
+    return p
 
 def inherit_params(p, upper_policy):
     """
