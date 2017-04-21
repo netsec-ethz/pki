@@ -24,12 +24,11 @@ class SecLevel(object):
     HIGH = 2
 
 
-class FailCase(object):
-    SOFT = 0
-    HARD = 1
+class ValidationResult(object):
+    ACCEPT = 0
+    SOFTFAIL = 1
+    HARDFAIL = 2
 
-class ValidationResult(FailCase):
-    ACCEPT = 3
 
 class PolicyFields(object):
     POLICY_VERSION = 'POLICY_VERSION'
@@ -81,11 +80,11 @@ DEFAULT_POLICY = {
         PolicyFields.UP_CA_TH: 1,
         PolicyFields.UP_COP_UNTRUSTED: DAY*7,
         PolicyFields.UP_COP_UNLINKED: DAY*7,
-        PolicyFields.FAIL_CERT_TH: FailCase.SOFT,
-        PolicyFields.FAIL_TLS_SEC: FailCase.SOFT,
-        PolicyFields.FAIL_LOG_EXP: FailCase.SOFT,
-        PolicyFields.FAIL_POL_VER: FailCase.SOFT,
-        PolicyFields.FAIL_LOG_PROOF: FailCase.SOFT,
+        PolicyFields.FAIL_CERT_TH: ValidationResult.SOFTFAIL,
+        PolicyFields.FAIL_TLS_SEC: ValidationResult.SOFTFAIL,
+        PolicyFields.FAIL_LOG_EXP: ValidationResult.SOFTFAIL,
+        PolicyFields.FAIL_POL_VER: ValidationResult.SOFTFAIL,
+        PolicyFields.FAIL_LOG_PROOF: ValidationResult.SOFTFAIL,
         PolicyFields.INHERITANCE: [],
         }
 

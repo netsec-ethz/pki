@@ -57,9 +57,9 @@ def _get_trusted_pems(trc, ca_list=None):
 def verify(domain_name, msc, scps, proof, trc, tls_sec):
     # First pre-validate
     if not _verify_proof(msc, scps, proof):
-        return ValidationResult.HARD
-    if not _verify_scps():
-        return ValidationResult.HARD
+        return ValidationResult.HARDFAIL
+    if not _verify_scps(domain_name, scps, trc):
+        return ValidationResult.HARDFAIL
     return _verify_msc()
 
     return ValidationResult.ACCEPT
@@ -99,7 +99,7 @@ def _verify_msc(domain_name, msc, scps, trc):
     # First check whether domain name matches
     if domain_name != msc.domain_name:
         logging.error("%s != %s" % (domain_name, msc.domain_name))
-        return (False, FailCase.HARD)
+        return (False, ValidationResult.HARDFAIL)
 
     # Determine the final policy
     p = _determine_policy(domain_name, scps, trc)
