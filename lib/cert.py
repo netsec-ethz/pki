@@ -16,9 +16,14 @@ import logging
 from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
 from pki.lib.defines import CERT_SEP, SecLevel
-from pki.lib.verifier import VrfyResults
-from pki.lib.x509 import (binding_from_pem, certs_to_pem, get_cn, pem_to_certs,
-        policy_from_cert, verify_cert_chain)
+from pki.lib.x509 import (
+        ChainProperties,
+        binding_from_pem,
+        certs_to_pem, get_cn,
+        pem_to_certs,
+        policy_from_cert,
+        verify_cert_chain,
+        )
 
 
 class EECert(object):
@@ -40,7 +45,7 @@ class EECert(object):
         for chain in self.chains:
             pem = certs_to_pem(chain)
             if verify_cert_chain(pem, trusted_certs):
-                res.append(VrfyResults(chain))
+                res.append(ChainProperties(chain))
         return res
 
     def __repr__(self):

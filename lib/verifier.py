@@ -18,28 +18,6 @@ from pki.lib.defines import DEFAULT_POLICY, ValidationResult, SecLevel, PolicyFi
 from pki.lib.x509 import get_cn, cert_from_der, certs_to_pem
 
 
-class VrfyResults(object):
-    # TODO(PSz): rename to chain property and move to x509?
-    """
-    Helper class for storing results of a successful chain verification.
-    """
-    def __init__(self, chain):
-        self.ca = get_cn(chain[-1])
-        self.path_len = len(chain)
-        # TODO(PSz): derive the following
-        self.sec_lvl = SecLevel.MEDIUM
-        self.ev = False
-        self.valid_for = 12345
-        self.wildcard = False
-
-    def __repr__(self):
-        s = "<VrfyResult: "
-        s += "CA: %s, PathLen: %d, SecLvl: %s, EV: %s, ValidFor: %d, Wildcard: %s" %  (self.ca,
-            self.path_len, self.sec_lvl, self.ev, self.valid_for, self.wildcard)
-        s += ">"
-        return s
-
-
 def _get_trusted_pems(trc, ca_list=None):
     """
     Returns list of trusted certificates (PEM) from TRC.

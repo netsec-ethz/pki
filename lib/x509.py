@@ -21,13 +21,69 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509 import (load_der_x509_certificate,
-        load_pem_x509_certificate, CertificatePolicies, ExtensionNotFound,
-        ObjectIdentifier, PolicyInformation)
+from cryptography.x509 import (
+        load_der_x509_certificate,
+        load_pem_x509_certificate,
+        CertificatePolicies,
+        ExtensionNotFound,
+        ObjectIdentifier,
+        PolicyInformation,
+        )
 from cryptography.x509.oid import NameOID
 from OpenSSL import crypto
 
-from pki.lib.defines import CERT_SEP, DEFAULT_CERT_VALIDITY, POLICY_BINDIND_OID, POLICY_OID
+from pki.lib.defines import (
+        CERT_SEP,
+        DEFAULT_CERT_VALIDITY,
+        POLICY_BINDIND_OID,
+        POLICY_OID,
+        SecLevel,
+        )
+
+
+class ChainProperties(object):
+    """
+    Helper class for storing properties of a certificate chain.
+    """
+    def __init__(self, chain):
+        self.chain = chain
+        self.leaf_cert = None
+        self.ca = None
+        self.path_len = 0
+        self.sec_lvl = None
+        self.ev = None
+        self.valid_for = 0
+        self.wildcard = None
+        if self.chain:
+            self.leaf_cert = chain[0]
+            self.ca = get_cn(chain[-1])
+            self.path_len = len(chain)
+            self._set_sec_lvl()
+            self._set_ev()
+            self._set_validity()
+            self._set_wildcard()
+
+    def _set_sec_lvl(self):
+        # TODO(PSz)
+        self.sec_lvl = SecLevel.MEDIUM
+
+    def _set_ev(self):
+        # TODO(PSz)
+        self.ev = False
+
+    def _set_validity(self):
+        delta = self.leaf_cert.not_valid_after - self.leaf_cert.not_valid_before
+        self.valid_for = int(delta.total_seconds())
+
+    def _set_wildcard(self):
+        self.wildcard = '*' in get_cn(self.leaf_cert)  # TODO(PSz): check DNSName
+
+    def __repr__(self):
+        s = "<ChainProperties: "
+        s += "CA: %s, PathLen: %d, SecLvl: %s, EV: %s, ValidFor: %d, Wildcard: %s" %  (self.ca,
+            self.path_len, self.sec_lvl, self.ev, self.valid_for, self.wildcard)
+        s += ">"
+        return s
 
 
 def random_serial_number():
