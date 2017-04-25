@@ -104,12 +104,12 @@ def _verify_msc(domain_name, msc, p, trc):
     # Validate results according to the policy
     s = set()
     for res in results:
-        if (res.sec_lvl < p[PF.CERT_SEC] or res.path_len > p[PF.MAX_PATH_LEN] or
-            res.valid_for > p[PF.MAX_LIFETIME] or
-            (not res.ev and p[PF.EV_ONLY]) or
-            (res.wildcard and p[PF.WILDCARD_FORBIDDEN])):
-            continue
-        s.add(res.ca)
+        if (res.sec_lvl >= p[PF.CERT_SEC] and
+            res.path_len <= p[PF.MAX_PATH_LEN] and
+            res.valid_for <= p[PF.MAX_LIFETIME] and
+            (res.ev or not p[PF.EV_ONLY]) and
+            (not res.wildcard or not p[PF.WILDCARD_FORBIDDEN])):
+            s.add(res.ca)
     print(s)
     return len(s) >= p[PF.CERT_TH]
 
