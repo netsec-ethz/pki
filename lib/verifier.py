@@ -14,7 +14,12 @@
 import copy
 import logging
 
-from pki.lib.defines import DEFAULT_POLICY, ValidationResult, SecLevel, PolicyFields as PF
+from pki.lib.defines import (
+        DEFAULT_POLICY,
+        ValidationResult,
+        SecLevel,
+        PolicyFields as PF,
+        )
 from pki.lib.x509 import get_cn, cert_from_der, certs_to_pem
 
 
@@ -121,7 +126,7 @@ def _determine_policy(domain_name, scps, trc):
     if not scps:
         return p
     # Copy domain's policy (if exists)
-    if domain_name == scps[0].domain_name:
+    if scps and domain_name == scps[0].domain_name:
         for key, value in scps[0].policy.items():
             p[key] = value
     # Inherit values from other policies

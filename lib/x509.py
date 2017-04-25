@@ -17,28 +17,32 @@ import json
 import logging
 import os
 
-from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509 import (
-        load_der_x509_certificate,
-        load_pem_x509_certificate,
-        CertificatePolicies,
-        ExtensionNotFound,
-        ObjectIdentifier,
-        PolicyInformation,
-        )
-from cryptography.x509.oid import NameOID
+    load_der_x509_certificate,
+    load_pem_x509_certificate,
+    oid,
+    BasicConstraints,
+    CertificateBuilder,
+    CertificatePolicies,
+    DNSName,
+    ExtensionNotFound,
+    Name,
+    NameAttribute,
+    ObjectIdentifier,
+    PolicyInformation,
+    SubjectAlternativeName,
+    )
 from OpenSSL import crypto
 
 from pki.lib.defines import (
-        CERT_SEP,
-        DEFAULT_CERT_VALIDITY,
-        POLICY_BINDIND_OID,
-        POLICY_OID,
-        SecLevel,
-        )
+    CERT_SEP,
+    DEFAULT_CERT_VALIDITY,
+    POLICY_BINDIND_OID,
+    POLICY_OID,
+    SecLevel,
+    )
 
 
 class ChainProperties(object):
@@ -79,11 +83,11 @@ class ChainProperties(object):
         self.wildcard = '*' in get_cn(self.leaf_cert)  # TODO(PSz): check DNSName
 
     def __repr__(self):
-        s = "<ChainProperties: "
-        s += "CA: %s, PathLen: %d, SecLvl: %s, EV: %s, ValidFor: %d, Wildcard: %s" %  (self.ca,
+        res = "<ChainProperties: "
+        res += "CA: %s, PathLen: %d, SecLvl: %s, EV: %s, ValidFor: %d, Wildcard: %s" %  (self.ca,
             self.path_len, self.sec_lvl, self.ev, self.valid_for, self.wildcard)
-        s += ">"
-        return s
+        res += ">"
+        return res
 
 
 def random_serial_number():
@@ -97,8 +101,8 @@ def create_x509cert(domain_name, pubkey, ca_cert, ca_privkey, exts=None):
     """
     one_day = datetime.timedelta(1, 0, 0)
     now = datetime.datetime.today()
-    builder = x509.CertificateBuilder()
-    x509_dn = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, domain_name)])
+    builder = CertificateBuilder()
+    x509_dn = Name([NameAttribute(oid.NameOID.COMMON_NAME, domain_name)])
     builder = builder.subject_name(x509_dn)
     if ca_cert:
         builder = builder.issuer_name(ca_cert.issuer)
@@ -110,10 +114,10 @@ def create_x509cert(domain_name, pubkey, ca_cert, ca_privkey, exts=None):
     builder = builder.public_key(pubkey)
     # Add standard extensions
     builder = builder.add_extension(
-        x509.SubjectAlternativeName([x509.DNSName(domain_name)]),
+        SubjectAlternativeName([DNSName(domain_name)]),
         critical=False)
     builder = builder.add_extension(
-        x509.BasicConstraints(ca=False, path_length=None), critical=True)
+        BasicConstraints(ca=False, path_length=None), critical=True)
     # Add passed extensions (i.e., policy or policy binding)
     for (ext, is_critical) in exts or []:
         builder = builder.add_extension(ext, critical=is_critical)
@@ -149,7 +153,7 @@ def binding_from_pem(pem):
     digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
     digest.update(pem)
     binding = base64.b64encode(digest.finalize()).decode('utf-8')
-    pi = x509.PolicyInformation(x509.ObjectIdentifier(POLICY_BINDIND_OID), [binding])
+    pi = PolicyInformation(ObjectIdentifier(POLICY_BINDIND_OID), [binding])
     return CertificatePolicies([pi]), is_critical
 
 def pem_to_certs(pem):
@@ -166,8 +170,9 @@ def certs_to_pem(certs):
 
 def get_cn(cert):
     # TODO(PSz): deprecate CN for leaf MSC certs
-    if cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME):
-        return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    attr = cert.subject.get_attributes_for_oid(oid.NameOID.COMMON_NAME)
+    if attr:
+        return attr[0].value
     return None
 
 def pubkey_from_file(path):
