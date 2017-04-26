@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Stdlib
-import json  # TODO(PSz): replace by a canonical parser
-
 # External
 from merkle import hash_function
+
+from pki.lib.utils import dict_to_json
 
 
 class TreeEntry(object):
@@ -37,7 +36,7 @@ class RevocationEntry(TreeEntry):
     def get_data(self):
         res = super().get_data()
         res['rev'] = self.rev.data  # TODO(PSz): check .data
-        return json.dumps(res)
+        return dict_to_json(res)
 
 
 class MSCEntry(TreeEntry):
@@ -49,7 +48,7 @@ class MSCEntry(TreeEntry):
     def get_data(self):
         res = super().get_data()
         res['msc'] = self.msc.pem
-        return json.dumps(res)
+        return dict_to_json(res)
 
 
 class CertificateEntry(TreeEntry):
@@ -67,7 +66,7 @@ class CertificateEntry(TreeEntry):
         res = super().get_data()
         res['msc'] = self.msc.pem
         res['rev'] = self.rev.data  # TODO(PSz): check .data
-        return json.dumps(res)
+        return dict_to_json(res)
 
     def get_label(self):
         return hash_function(self.msc.pem).digest()
@@ -82,7 +81,7 @@ class SCPEntry(TreeEntry):
     def get_data(self):
         res = super().get_data()
         res['scp'] = self.scp.pem
-        return json.dumps(res)
+        return dict_to_json(res)
 
     def get_label(self):
         return self.scp.domain_name
@@ -98,4 +97,4 @@ class RootsEntry(TreeEntry):
         res = super().get_data()
         res['policy_root'] = self.policy_tree_root
         res['cert_root'] = self.cert_tree_root
-        return json.dumps(res)
+        return dict_to_json(res)
