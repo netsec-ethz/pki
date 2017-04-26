@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Stdlib
+import bisect
+import logging
+
 # External
 from merkle import MerkleTree, Node
 
@@ -20,10 +24,10 @@ class TreeEntry(object):
         self.added = None
 
     def get_data_to_hash(self):
-        return b""
+        raise NotImplementedError
 
     def get_label(self):
-        return None
+        raise NotImplementedError
 
 
 class BaseTree(MerkleTree):
@@ -41,12 +45,21 @@ class BaseTree(MerkleTree):
         super().__init__(leaves)
 
     def add(self, entry):
-        if self.sort:
-            # find position and insert (entries + leaves)
-            pass
-        else:
+        if self.sort:  # Leaves of the tree are sorted
+            index = bisect.bisect_left(self.entries, entry)
+            if self.entries and self.entries[index] == entry:
+                logging.info("Replacing entry: %s by %s" % (self.entries[index], entry))
+                self.entries[index] = entry
+                self.leaves[index] = Node(entry.get_data_to_hash())
+            else:
+                self.entries.insert(index, entry)
+                self.leaves.insert(index, Node(entry.get_data_to_hash()))
+        else:  # Append-only tree
             self.entries.append(entry)
             self.leaves.append(Node(entry.get_data_to_hash()))
 
-    def add_hash(self, value):  # May be confusing, don't implement
+    def add_hash(self, value):  # Not needed and may be confusing, don't implement
+        raise NotImplementedError
+
+    def add_adjust(self, data, prehashed=False):  # Ditto
         raise NotImplementedError
