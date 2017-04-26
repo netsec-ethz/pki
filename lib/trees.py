@@ -21,7 +21,7 @@ from merkle import MerkleTree, Node
 
 
 class BaseTree(MerkleTree):
-    def __init__(entries=None, sort=False):
+    def __init__(self, entries=None, sort=False):
         self.entries = []
         if entries is not None:
             self.entries = entries
@@ -52,4 +52,60 @@ class BaseTree(MerkleTree):
         raise NotImplementedError
 
     def add_adjust(self, data, prehashed=False):  # Ditto
+        raise NotImplementedError
+
+
+class ConsistencyTree(BaseTree):
+    """
+    Tree that contains all object in chronological order. See Section 5.3 and
+    Figure 5 from the PoliCert paper.
+    """
+    def __init__(self, entries=None):
+        super().__init__(entries)  # Don't sort
+
+
+class CertificateTree(BaseTree):
+    """
+    Tree that contains all certificates and their (optional) revocations.
+    Entries of the tree are sorted. See Section 5.3 and Figure 3 from the
+    PoliCert paper.
+    """
+    def __init__(self, entries=None):
+        # Consider a list of accepted requests
+        super().__init__(entries, True)  # Sorted tree
+
+    def get_entry_by_hash(self, hash_):
+        raise NotImplementedError
+
+    def add_revocation(self, rev):
+        raise NotImplementedError
+
+
+class _PolicyTree(BaseTree):
+    """
+    Tree that contains all policies for a given domain level (e.g., all policies
+    of X.a.com, or all TLD policies). Entries of the tree are sorted. See
+    Section 5.3 and Figure 4 from the PoliCert paper.
+    """
+    def __init__(self, domain_name, entries=None):
+        super().__init__(entries, True)  # Sorted tree
+        self.domain_name = domain_name
+        self.subtree = None  # Pointer to a child tree
+
+    def get_subtree_root(self):
+        raise NotImplementedError
+
+
+class PolicyTree(object):
+    """
+    Tree (actually forest) that contains all policies. Entries of the tree are
+    sorted. See Section 5.3 and Figure 4 from the PoliCert paper.
+    """
+    def __init__(self, entries=None):
+        pass
+
+    def get_entry_by_name(self, name):
+        raise NotImplementedError
+
+    def add_revocation(self, rev):
         raise NotImplementedError
