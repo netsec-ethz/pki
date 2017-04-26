@@ -96,5 +96,6 @@ class RootsEntry(TreeEntry):
 
     def get_data(self):
         res = super().get_data()
-        res['roots'] = self.policy_tree_root + self.cert_tree_root
+        res['policy_root'] = self.policy_tree_root
+        res['cert_root'] = self.cert_tree_root
         return json.dumps(res)
