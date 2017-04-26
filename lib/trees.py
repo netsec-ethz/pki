@@ -19,16 +19,6 @@ import logging
 # External
 from merkle import MerkleTree, Node
 
-class TreeEntry(object):
-    def __init__():
-        self.added = None
-
-    def get_data_to_hash(self):
-        raise NotImplementedError
-
-    def get_label(self):
-        raise NotImplementedError
-
 
 class BaseTree(MerkleTree):
     def __init__(entries=None, sort=False):

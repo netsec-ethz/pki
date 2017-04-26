@@ -37,7 +37,7 @@ class EECert(object):
         self._parse(pem)
 
     def _parse(self, pem):
-        pass
+        raise NotImplementedError
 
     def verify_chains(self, trusted_certs):
         print("verify_chains")
