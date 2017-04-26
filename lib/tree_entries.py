@@ -20,30 +20,36 @@ from merkle import hash_function
 
 
 class TreeEntry(object):
-    def get_data_to_hash(self):
-        # TODO(PSz): add some type encoding
-        raise NotImplementedError
+    TYPE = None
+    def get_data(self):
+        return {"type": self.TYPE}
 
     def get_label(self):  # Have to be implemented for entries of sorted trees
         raise NotImplementedError
 
 
 class RevocationEntry(TreeEntry):
-    def __init__(msc):
+    TYPE = "rev"
+    def __init__(self, msc):
         self.rev = rev
         super().__init__()
 
-    def get_data_to_hash(self):
-        return self.rev.data   # TODO(PSz): check .data
+    def get_data(self):
+        res = super().get_data()
+        res['rev'] = self.rev.data  # TODO(PSz): check .data
+        return json.dumps(res)
 
 
 class MSCEntry(TreeEntry):
-    def __init__(msc):
+    TYPE = "msc"
+    def __init__(self, msc):
         self.msc = msc
         super().__init__()
 
-    def get_data_to_hash(self):
-        return self.msc.pem
+    def get_data(self):
+        res = super().get_data()
+        res['msc'] = self.msc.pem
+        return json.dumps(res)
 
 
 class CertificateEntry(TreeEntry):
@@ -51,13 +57,14 @@ class CertificateEntry(TreeEntry):
     Representation of a MSC and its revocation (optional). These entries build
     the CertificateTree.
     """
-    def __init__(msc, rev=None):
+    TYPE = "msc_rev"
+    def __init__(self, msc, rev=None):
         self.msc = msc
         self.rev = rev or None
         super().__init__()
 
-    def get_data_to_hash(self):
-        res = {}
+    def get_data(self):
+        res = super().get_data()
         res['msc'] = self.msc.pem
         res['rev'] = self.rev.data  # TODO(PSz): check .data
         return json.dumps(res)
@@ -67,21 +74,27 @@ class CertificateEntry(TreeEntry):
 
 
 class SCPEntry(TreeEntry):
-    def __init__(scp):
+    TYPE = "scp"
+    def __init__(self, scp):
         self.scp = scp
         super().__init__()
 
-    def get_data_to_hash(self):
-        return self.scp.pem
+    def get_data(self):
+        res = super().get_data()
+        res['scp'] = self.scp.pem
+        return json.dumps(res)
 
     def get_label(self):
         return self.scp.domain_name
 
 
 class RootsEntry(TreeEntry):
-    def __init__(policy_tree_root, cert_tree_root):
+    TYPE = "roots"
+    def __init__(self, policy_tree_root, cert_tree_root):
         self.policy_tree_root = policy_tree_root
         self.cert_tree_root = cert_tree_root
 
-    def get_data_to_hash(self):
-        return self.policy_tree_root + self.cert_tree_root
+    def get_data(self):
+        res = super().get_data()
+        res['roots'] = self.policy_tree_root + self.cert_tree_root
+        return json.dumps(res)

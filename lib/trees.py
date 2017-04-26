@@ -31,7 +31,7 @@ class BaseTree(MerkleTree):
         # Build an actual tree
         leaves = []
         for entry in entries:
-            leaves.append(entry.get_data_to_hash())
+            leaves.append(entry.get_data())
         super().__init__(leaves)
 
     def add(self, entry):
@@ -40,13 +40,13 @@ class BaseTree(MerkleTree):
             if self.entries and self.entries[index] == entry:
                 logging.info("Replacing entry: %s by %s" % (self.entries[index], entry))
                 self.entries[index] = entry
-                self.leaves[index] = Node(entry.get_data_to_hash())
+                self.leaves[index] = Node(entry.get_data())
             else:
                 self.entries.insert(index, entry)
-                self.leaves.insert(index, Node(entry.get_data_to_hash()))
+                self.leaves.insert(index, Node(entry.get_data()))
         else:  # Append-only tree
             self.entries.append(entry)
-            self.leaves.append(Node(entry.get_data_to_hash()))
+            self.leaves.append(Node(entry.get_data()))
 
     def add_hash(self, value):  # Not needed and may be confusing, don't implement
         raise NotImplementedError
