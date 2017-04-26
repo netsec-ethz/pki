@@ -17,13 +17,13 @@ from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
 from pki.lib.defines import CERT_SEP, SecLevel
 from pki.lib.x509 import (
-        ChainProperties,
-        binding_from_pem,
-        certs_to_pem, get_cn,
-        pem_to_certs,
-        policy_from_cert,
-        verify_cert_chain,
-        )
+    ChainProperties,
+    binding_from_pem,
+    certs_to_pem, get_cn,
+    pem_to_certs,
+    policy_from_cert,
+    verify_cert_chain,
+    )
 
 
 class EECert(object):
@@ -136,3 +136,15 @@ class SCP(EECert):
         tmp.append(super().__repr__())
         tmp.append("Policy: %s\n" % self.policy)
         return "".join(tmp)
+
+
+class Revocation(object):
+    """
+    Class for revocation messages.
+    """
+    def __init__(self, raw):
+        self.raw = raw
+        self._parse(raw)
+
+    def _parse(self, pem):
+        raise NotImplementedError

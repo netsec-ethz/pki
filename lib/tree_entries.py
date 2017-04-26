@@ -35,7 +35,7 @@ class RevocationEntry(TreeEntry):
 
     def get_data(self):
         res = super().get_data()
-        res['rev'] = self.rev.data  # TODO(PSz): check .data
+        res['rev'] = self.rev.raw
         return dict_to_json(res)
 
 
@@ -65,7 +65,7 @@ class CertificateEntry(TreeEntry):
     def get_data(self):
         res = super().get_data()
         res['msc'] = self.msc.pem
-        res['rev'] = self.rev.data  # TODO(PSz): check .data
+        res['rev'] = self.rev.raw
         return dict_to_json(res)
 
     def get_label(self):
