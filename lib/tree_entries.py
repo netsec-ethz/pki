@@ -11,11 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from functools import total_ordering
+
 from merkle import hash_function
 
-from pki.lib.utils import dict_to_json
+from .utils import dict_to_json
 
-
+@total_ordering
 class TreeEntry(object):
     TYPE = None
     def get_data(self):
@@ -24,10 +26,16 @@ class TreeEntry(object):
     def get_label(self):  # Have to be implemented for entries of sorted trees
         raise NotImplementedError
 
+    def __lt__(self, other):
+        return self.get_label() < other.get_label()
+
+    def __eq__(self, other):
+        return self.get_data() == other.get_data()
+
 
 class RevocationEntry(TreeEntry):
     TYPE = "rev"
-    def __init__(self, msc):
+    def __init__(self, rev):
         self.rev = rev
         super().__init__()
 
