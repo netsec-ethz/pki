@@ -15,8 +15,8 @@ import logging
 
 from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
-from pki.lib.defines import CERT_SEP, SecLevel
-from pki.lib.x509 import (
+from .defines import CERT_SEP, SecLevel
+from .x509 import (
     ChainProperties,
     binding_from_pem,
     certs_to_pem, get_cn,

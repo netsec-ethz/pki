@@ -36,7 +36,7 @@ from cryptography.x509 import (
     )
 from OpenSSL import crypto
 
-from pki.lib.defines import (
+from .defines import (
     CERT_SEP,
     DEFAULT_CERT_VALIDITY,
     POLICY_BINDIND_OID,

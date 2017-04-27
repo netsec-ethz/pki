@@ -14,13 +14,8 @@
 import copy
 import logging
 
-from pki.lib.defines import (
-        DEFAULT_POLICY,
-        ValidationResult,
-        SecLevel,
-        PolicyFields as PF,
-        )
-from pki.lib.x509 import get_cn, cert_from_der, certs_to_pem
+from .defines import DEFAULT_POLICY, ValidationResult, SecLevel, PolicyFields as PF
+from .x509 import get_cn, cert_from_der, certs_to_pem
 
 
 def _get_trusted_pems(trc, ca_list=None):
