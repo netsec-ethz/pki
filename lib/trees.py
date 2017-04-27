@@ -98,7 +98,6 @@ class SortedTree(BaseTree):
         return (proof1, proof2)
 
 
-
 class ConsistencyTree(AppendOnlyTree):
     """
     Tree that contains all object in chronological order. See Section 5.3 and
@@ -133,9 +132,6 @@ class PolicySubTree(SortedTree):
         super().__init__(entries, True)  # Sorted tree
         self.domain_name = domain_name
         self.subtree = None  # Pointer to a child tree
-
-    def get_subtree_root(self):
-        raise NotImplementedError
 
 
 class PolicyTree(object):
