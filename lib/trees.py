@@ -19,6 +19,16 @@ import logging
 # External
 from merkle import MerkleTree, Node
 
+# EEPKI
+from .tree_entries import (
+    CertificateEntry,
+    MSCEntry,
+    RevocationEntry,
+    RootsEntry,
+    SCPEntry,
+    )
+
+
 
 class BaseTree(MerkleTree):
     def __init__(self, entries=None, sort=False):
@@ -54,6 +64,9 @@ class BaseTree(MerkleTree):
     def add_adjust(self, data, prehashed=False):  # Ditto
         raise NotImplementedError
 
+    def get_proof_for_entry(self, entry):
+        raise NotImplementedError
+
 
 class ConsistencyTree(BaseTree):
     """
@@ -81,7 +94,7 @@ class CertificateTree(BaseTree):
         raise NotImplementedError
 
 
-class _PolicyTree(BaseTree):
+class PolicySubTree(BaseTree):
     """
     Tree that contains all policies for a given domain level (e.g., all policies
     of X.a.com, or all TLD policies). Entries of the tree are sorted. See
@@ -98,11 +111,16 @@ class _PolicyTree(BaseTree):
 
 class PolicyTree(object):
     """
-    Tree (actually forest) that contains all policies. Entries of the tree are
-    sorted. See Section 5.3 and Figure 4 from the PoliCert paper.
+    Forest that contains all trees (with policies) for all domains. Entries of
+    the trees are sorted. See Section 5.3 and Figure 4 from the PoliCert paper.
     """
     def __init__(self, entries=None):
-        pass
+        self.tld_tree = PolicySubTree()
+        if entries:
+            self.create_trees(entries)
+
+    def create_trees(entries):
+        raise NotImplementedError
 
     def get_entry_by_name(self, name):
         raise NotImplementedError
