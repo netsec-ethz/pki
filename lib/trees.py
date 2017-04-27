@@ -58,13 +58,19 @@ class BaseTree(MerkleTree):
             self.entries.append(entry)
             self.leaves.append(Node(entry.get_data()))
 
+    def get_proof(self, entry):
+        raise NotImplementedError
+
+    def get_presence_proof(self, entry):
+        raise NotImplementedError
+
+    def get_absence_proof(self, entry):
+        assert self.sort
+
     def add_hash(self, value):  # Not needed and may be confusing, don't implement
         raise NotImplementedError
 
     def add_adjust(self, data, prehashed=False):  # Ditto
-        raise NotImplementedError
-
-    def get_proof_for_entry(self, entry):
         raise NotImplementedError
 
 
@@ -115,7 +121,7 @@ class PolicyTree(object):
     the trees are sorted. See Section 5.3 and Figure 4 from the PoliCert paper.
     """
     def __init__(self, entries=None):
-        self.tld_tree = PolicySubTree()
+        self.tld_tree = PolicySubTree(b"")
         if entries:
             self.create_trees(entries)
 

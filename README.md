@@ -1,9 +1,14 @@
 # pki
 End-entity PKI
 
+
 Requirements:
+- (developed and tested on Ubuntu 16.06)
 - cryptography.io (apt install python3-cryptography)
+- pyOpenSSL (apt install python3-openssl)
 - merkle (pip3 install merkle)
+- SCION codebase (https://github.com/netsec-ethz/scion)
+
 
 References:
 - The ARPKI papers:
