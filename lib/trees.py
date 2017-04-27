@@ -41,7 +41,7 @@ class BaseTree(MerkleTree):
             return self.root.val
         return hash_function(b"").digest()
 
-    def get_proof(self, index):
+    def get_proof_idx(self, index):
         if 0 <= index < len(self.leaves):
             return self.get_chain(index)
         return None
@@ -83,16 +83,20 @@ class SortedTree(BaseTree):
         bisect.bisect_left(self.leaves, hash_)
 
     def get_proof(self, entry):
-        presence = self.get_presence_proof(entry)
-        if presence:
-            return presence
-        return self.get_absence_proof(entry)
+        if not self.entries:
+            return None
+        index = get_idx_for_entry(entry)
+        if self.entries[index] == entry:
+            return self.get_proof_idx(index)
+        else:
+            return self.get_absence_proof_idx(index-1, index)
 
-    def get_presence_proof(self, entry):
-        raise NotImplementedError
+    def get_absence_proof_idx(self, index1, index2):
+        # TODO(PSz): entries should be returned as well
+        proof1 = get_proof_idx(index1)
+        proof2 = get_proof_idx(index2)
+        return (proof1, proof2)
 
-    def get_absence_proof(self, entry):  # Can be implemented only by sorted trees
-        raise NotImplementedError
 
 
 class ConsistencyTree(AppendOnlyTree):
@@ -100,8 +104,6 @@ class ConsistencyTree(AppendOnlyTree):
     Tree that contains all object in chronological order. See Section 5.3 and
     Figure 5 from the PoliCert paper.
     """
-    def get_presence_proof(self, entry):
-        raise NotImplementedError
 
 
 class CertificateTree(SortedTree):
