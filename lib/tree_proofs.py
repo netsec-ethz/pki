@@ -32,7 +32,7 @@ class BaseProof(object):
         return {"type": self.TYPE}
 
     @classmethod
-    def from_values(cls):
+    def from_values(cls, entry_chain_list):
         raise NotImplementedError
 
     def verify(self, external_root=None):
