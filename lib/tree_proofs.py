@@ -20,20 +20,17 @@ from .utils import dict_to_json
 
 class BaseProof(object):
     TYPE = None
-    def __init__(self, raw):
+    def __init__(self, raw=None):
         self.raw = raw
         self.extra_entries = []
-        self.parse(raw)
+        if raw is not None:
+            self.parse(raw)
 
     def parse(self, raw):
         raise NotImplementedError
 
     def pack(self):
         return {"type": self.TYPE}
-
-    @classmethod
-    def from_values(cls, entry_chain_list):
-        raise NotImplementedError
 
     def verify(self, external_root=None):
         raise NotImplementedError
@@ -47,7 +44,7 @@ class BaseProof(object):
 
 class PresenceProof(ProofBase):
     TYPE = "presence"
-    def __init__(self, raw):
+    def __init__(self, raw=None):
         self.entry = None
         self.chain = None
         super().__init__(raw)
@@ -57,20 +54,35 @@ class PresenceProof(ProofBase):
         # TODO(PSz): other fields + base64
         return dict_to_json(tmp)
 
+    @classmethod
+    def from_values(cls, entry_chain_list):
+        raise NotImplementedError
+
 
 class AbsenceProof(ProofBase):
     """
     TODO(PSz): describe how it is encoded
     """
     TYPE = "absence"
-    def __init__(self, raw):
-        self.entry1 = None
-        self.chain1 = None
-        self.entry2 = None
-        self.chain2 = None
+    def __init__(self, raw=None):
+        """
+        Absence proof consists of two presence proofs.
+        """
+        self.proof1 = None
+        self.proof2 = None
         super().__init__(raw)
+
+    def parse(self, raw):
+        pass
 
     def pack(self):
         tmp = super().__pack__()
         # TODO(PSz): other fields + base64
         return dict_to_json(tmp)
+
+    @classmethod
+    def from_values(cls, proof1, proof2):
+        inst = cls()
+        inst.proof1 = proof1
+        inst.proof2 = proof2
+        return inst
