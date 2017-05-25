@@ -73,12 +73,15 @@ class SortedTree(BaseTree):
     def add(self, entry):
         index = self.get_idx_for_entry(entry)
         if self.entries and self.entries[index] == entry:
-            logging.info("Replacing entry: %s by %s" % (self.entries[index], entry))
-            self.entries[index] = entry
-            self.leaves[index] = Node(entry.get_data())
+            self._handle_existing_entry(index, entry)
         else:
             self.entries.insert(index, entry)
             self.leaves.insert(index, Node(entry.get_data()))
+
+    def _handle_existing_entry(self, index, entry):
+        logging.info("Replacing entry: %s by %s" % (self.entries[index], entry))
+        # self.entries[index] = entry
+        # self.leaves[index] = Node(entry.get_data())
 
     def get_idx_for_entry(self, entry):
         bisect.bisect_left(self.entries, entry)
@@ -130,6 +133,11 @@ class PolicySubTree(SortedTree):
         self.domain_name = domain_name
         self.subtree = None  # Pointer to a child tree
 
+    def _handle_existing_entry(self, index, entry):
+        logging.info("updating policy entry: %s by %s" % (self.entries[index], entry))
+        # PSz: Check version here?
+        self.entries[index].scp = entry.scp
+        self.leaves[index] = Node(self.entries[index].get_data())
 
 class PolicyTree(object):
     """
@@ -137,15 +145,32 @@ class PolicyTree(object):
     the trees are sorted. See Section 5.3 and Figure 4 from the PoliCert paper.
     """
     def __init__(self, entries=None):
-        self.tld_tree = PolicySubTree(b"")
+        self.tld_tree = PolicySubTree("")
         if entries:
             self.create_trees(entries)
 
-    def create_trees(entries):
+    def create_trees(self, entries):
         raise NotImplementedError
 
     def get_entry_by_name(self, name):
-        raise NotImplementedError
+        tree = self.tld_tree
+        for name in reversed(domain_name.split(".")):
+            if tree.
+
+    def add(self, scp):
+        subtree = self._find_subtree(domain_name, True)
+        entry = PolicyEntry(scp, subtree.subtree)
+
+    def _find_subtree(self, domain_name, create=False):
+        tree = self.tld_tree
+        for name in reversed(domain_name.split(".")):
+            if tree.
+
+
+
 
     def add_revocation(self, rev):
         raise NotImplementedError
+
+    def build(self):
+        raise NotImplementedError  # rebuild all trees
