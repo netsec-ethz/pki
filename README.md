@@ -4,7 +4,7 @@ End-entity PKI
 
 Requirements:
 - (developed and tested on Ubuntu 16.06)
-- cryptography.io (apt install python3-cryptography)
+- cryptography.io (pip3 install cryptography)
 - pyOpenSSL (apt install python3-openssl)
 - merkle (pip3 install merkle)
 - SCION codebase (https://github.com/netsec-ethz/scion)

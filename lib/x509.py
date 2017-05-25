@@ -22,6 +22,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.x509 import (
     load_der_x509_certificate,
     load_pem_x509_certificate,
+    random_serial_number,
     oid,
     BasicConstraints,
     CertificateBuilder,
@@ -89,11 +90,6 @@ class ChainProperties(object):
         res += ">"
         return res
 
-
-def random_serial_number():
-    # FIXME(PSz): can be replaced by x509.random_serial_numer() when we have a
-    # newer version of cryptography.io (>=1.6)
-    return int.from_bytes(os.urandom(20), byteorder="big")
 
 def create_x509cert(domain_name, pubkey, ca_cert, ca_privkey, exts=None):
     """
