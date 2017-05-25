@@ -17,30 +17,6 @@ POLICY_OID = "1.2.34.56.1"
 POLICY_BINDIND_OID = "1.2.34.56.2"
 CERT_SEP = b'-----BEGIN CERTIFICATE-----\n'
 DAY = 3600*24
-DEFAULT_POLICY = {
-    PolicyFields.POLICY_VERSION: 1,
-    PolicyFields.LOG_LIST: [],
-    PolicyFields.LOG_TIMEOUT: DAY*7,
-    PolicyFields.CA_LIST: [],
-    PolicyFields.CERT_TH: 1,
-    PolicyFields.REV_KEY: True,
-    PolicyFields.EV_ONLY: False,
-    PolicyFields.MAX_PATH_LEN: 5,
-    PolicyFields.WILDCARD_FORBIDDEN: False,
-    PolicyFields.MAX_LIFETIME: DAY*365*3,
-    PolicyFields.CERT_SEC: SecLevel.LOW,
-    PolicyFields.TLS_SEC: SecLevel.LOW,
-    PolicyFields.UP_CA_MIN: 1,
-    PolicyFields.UP_CA_TH: 1,
-    PolicyFields.UP_COP_UNTRUSTED: DAY*7,
-    PolicyFields.UP_COP_UNLINKED: DAY*7,
-    PolicyFields.FAIL_CERT_TH: ValidationResult.SOFTFAIL,
-    PolicyFields.FAIL_TLS_SEC: ValidationResult.SOFTFAIL,
-    PolicyFields.FAIL_PROOF_EXP: ValidationResult.SOFTFAIL,
-    PolicyFields.FAIL_POL_VER: ValidationResult.SOFTFAIL,
-    PolicyFields.FAIL_LOG: ValidationResult.SOFTFAIL,
-    PolicyFields.INHERITANCE: [],
-    }
 
 
 class SecLevel(object):
@@ -87,14 +63,42 @@ class PolicyFields(object):
     BOOL_SET = [EV_ONLY, WILDCARD_FORBIDDEN]
 
 
+DEFAULT_POLICY = {
+    PolicyFields.POLICY_VERSION: 1,
+    PolicyFields.LOG_LIST: [],
+    PolicyFields.LOG_TIMEOUT: DAY*7,
+    PolicyFields.CA_LIST: [],
+    PolicyFields.CERT_TH: 1,
+    PolicyFields.REV_KEY: True,
+    PolicyFields.EV_ONLY: False,
+    PolicyFields.MAX_PATH_LEN: 5,
+    PolicyFields.WILDCARD_FORBIDDEN: False,
+    PolicyFields.MAX_LIFETIME: DAY*365*3,
+    PolicyFields.CERT_SEC: SecLevel.LOW,
+    PolicyFields.TLS_SEC: SecLevel.LOW,
+    PolicyFields.UP_CA_MIN: 1,
+    PolicyFields.UP_CA_TH: 1,
+    PolicyFields.UP_COP_UNTRUSTED: DAY*7,
+    PolicyFields.UP_COP_UNLINKED: DAY*7,
+    PolicyFields.FAIL_CERT_TH: ValidationResult.SOFTFAIL,
+    PolicyFields.FAIL_TLS_SEC: ValidationResult.SOFTFAIL,
+    PolicyFields.FAIL_PROOF_EXP: ValidationResult.SOFTFAIL,
+    PolicyFields.FAIL_POL_VER: ValidationResult.SOFTFAIL,
+    PolicyFields.FAIL_LOG: ValidationResult.SOFTFAIL,
+    PolicyFields.INHERITANCE: [],
+    }
+
+
 class MsgFields(object):
     TYPE = "type"
     REV = "rev"
     MSC = "msc"
     SCP = "scp"
-    MSC_REV = "msc_rev"
+    CERT = "cert"
+    POLICY = "policy"
     ROOTS = "roots"
     POLICY_ROOT = "policy_root"
     CERT_ROOT = "cert_root"
+    SUBROOT = "subroot"
     ABSENCE_PROOF = "absence"
     PRESENCE_PROOF = "presence"

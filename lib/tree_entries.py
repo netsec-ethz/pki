@@ -15,7 +15,7 @@ from functools import total_ordering
 
 from merkle import hash_function
 
-from .utils import dict_to_json
+from .utils import dict_to_cbor
 from .defines import MsgFields
 
 @total_ordering
@@ -43,7 +43,7 @@ class RevocationEntry(TreeEntry):
     def get_data(self):
         res = super().get_data()
         res[MsgFields.REV] = self.rev.raw
-        return dict_to_json(res)
+        return dict_to_cbor(res)
 
 
 class MSCEntry(TreeEntry):
@@ -55,7 +55,7 @@ class MSCEntry(TreeEntry):
     def get_data(self):
         res = super().get_data()
         res[MsgFields.MSC] = self.msc.pem
-        return dict_to_json(res)
+        return dict_to_cbor(res)
 
 
 class CertificateEntry(TreeEntry):
@@ -63,7 +63,7 @@ class CertificateEntry(TreeEntry):
     Representation of a MSC and its revocation (optional). These entries build
     the CertificateTree.
     """
-    TYPE = MsgFields.MSC_REV
+    TYPE = MsgFields.CERT
     def __init__(self, msc, rev=None):
         self.msc = msc
         self.rev = rev or None
@@ -72,8 +72,11 @@ class CertificateEntry(TreeEntry):
     def get_data(self):
         res = super().get_data()
         res[MsgFields.MSC] = self.msc.pem
-        res[MsgFields.REV] = self.rev.raw
-        return dict_to_json(res)
+        if self.rev:
+            res[MsgFields.REV] = self.rev.raw
+        else:
+            res[MsgFields.REV] = None
+        return dict_to_cbor(res)
 
     def get_label(self):
         return hash_function(self.msc.pem).digest()
@@ -88,7 +91,7 @@ class SCPEntry(TreeEntry):
     def get_data(self):
         res = super().get_data()
         res[MsgFields.SCP] = self.scp.pem
-        return dict_to_json(res)
+        return dict_to_cbor(res)
 
     def get_label(self):
         return self.scp.domain_name
@@ -104,4 +107,27 @@ class RootsEntry(TreeEntry):
         res = super().get_data()
         res[MsgFields.POLICY_ROOT] = self.policy_tree_root
         res[MsgFields.CERT_ROOT] = self.cert_tree_root
-        return dict_to_json(res)
+        return dict_to_cbor(res)
+
+
+class PolicyEntry(TreeEntry):
+    """
+    Representation of an SCP and its subtree. These entries build the PolicyTree.
+    """
+    TYPE = MsgFields.POLICY
+    def __init__(self, scp, subtree=None):
+        self.scp = scp
+        self.subtree = subtree
+        super().__init__()
+
+    def get_data(self):
+        res = super().get_data()
+        res[MsgFields.SCP] = self.scp.pem
+        if self.subtree:
+            res[MsgFields.SUBROOT] = self.subtree.root
+        else:
+            res[MsgFields.SUBROOT] = None
+        return dict_to_cbor(res)
+
+    def get_label(self):
+        return self.scp.domain_name

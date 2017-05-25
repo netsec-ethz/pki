@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 # from cryptography.x509 import load_pem_x509_certificate
+
 from pki.lib.defines import SecLevel, ValidationResult
 from pki.lib.x509 import certs_to_pem, pem_to_certs
 from pki.lib.cert import MSC, SCP
@@ -65,4 +67,30 @@ if __name__ == "__main__":
         print("ACCEPT")
     else:
         print("Unknown res: %s" % res)
+
+
+# Test Trees
+from pki.lib.tree_entries import *
+from pki.lib.trees import *
+import copy
+
+scps = []
+mscs = []
+certs = []
+for i in range(1000):
+    tmp = copy.copy(scp)
+    tmp.pem = b"SCPpem: %d" % i
+    tmp.domain_name = str(i)
+    scps.append(SCPEntry(tmp))
+    #
+    tmp = copy.copy(msc)
+    tmp.pem = b"MSCpem: %d" % i
+    tmp.domain_name = str(i)
+    mscs.append(MSCEntry(tmp))
+    certs.append(CertificateEntry(tmp))
+
+import random
+random.shuffle(certs)
+chrontree = ConsistencyTree(scps+mscs)
+certtree = CertificateTree(certs)
 

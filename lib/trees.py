@@ -109,8 +109,8 @@ class CertificateTree(SortedTree):
     PoliCert paper.
     """
     def __init__(self, entries=None):
-        # Consider a list of accepted requests
-        super().__init__(entries, True)  # Sorted tree
+        # PSz: Consider a list of accepted requests
+        super().__init__(entries)  # Sorted tree
 
     def get_entry_by_hash(self, hash_):
         raise NotImplementedError

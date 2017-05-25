@@ -11,9 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
-
+import cbor
 
 # FIXME(PSz): to be replaced by canonical CBOR
-def dict_to_json(dict_):
-    return json.dumps(dict_, sort_keys=True)
+def dict_to_cbor(dict_):
+    return cbor.dumps(dict_, sort_keys=True)
