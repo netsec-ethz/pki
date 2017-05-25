@@ -86,6 +86,12 @@ class SortedTree(BaseTree):
     def get_idx_for_entry(self, entry):
         bisect.bisect_left(self.entries, entry)
 
+    def get_entry(self, label):
+        idx = self.get_idx_for_entry(label)
+        if label == self.entries[idx].get_label():
+            return self.entries[idx].get_label()
+        return None
+
     def get_idx_for_hash(self, hash_):
         bisect.bisect_left(self.leaves, hash_)
 
@@ -145,29 +151,31 @@ class PolicyTree(object):
     the trees are sorted. See Section 5.3 and Figure 4 from the PoliCert paper.
     """
     def __init__(self, entries=None):
-        self.tld_tree = PolicySubTree("")
+        self.tld_tree = None
         if entries:
             self.create_trees(entries)
 
     def create_trees(self, entries):
         raise NotImplementedError
 
-    def get_entry_by_name(self, name):
+    def get_entry(self, domain_name):
         tree = self.tld_tree
+        entry = None
         for name in reversed(domain_name.split(".")):
-            if tree.
+            if not tree:
+                return None
+            entry = tree.get_entry(name)
+            tree = entry.subtree
+        return entry
 
     def add(self, scp):
-        subtree = self._find_subtree(domain_name, True)
+        subtree = self.find_subtree(domain_name, True)
         entry = PolicyEntry(scp, subtree.subtree)
 
-    def _find_subtree(self, domain_name, create=False):
+    def find_subtree(self, domain_name, create=False):
         tree = self.tld_tree
         for name in reversed(domain_name.split(".")):
             if tree.
-
-
-
 
     def add_revocation(self, rev):
         raise NotImplementedError
