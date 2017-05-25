@@ -16,12 +16,13 @@ from functools import total_ordering
 from merkle import hash_function
 
 from .utils import dict_to_json
+from .defines import MsgFields
 
 @total_ordering
 class TreeEntry(object):
     TYPE = None
     def get_data(self):
-        return {"type": self.TYPE}
+        return {MsgFields.TYPE: self.TYPE}
 
     def get_label(self):  # Have to be implemented for entries of sorted trees
         raise NotImplementedError
@@ -34,26 +35,26 @@ class TreeEntry(object):
 
 
 class RevocationEntry(TreeEntry):
-    TYPE = "rev"
+    TYPE = MsgFields.REV
     def __init__(self, rev):
         self.rev = rev
         super().__init__()
 
     def get_data(self):
         res = super().get_data()
-        res['rev'] = self.rev.raw
+        res[MsgFields.REV] = self.rev.raw
         return dict_to_json(res)
 
 
 class MSCEntry(TreeEntry):
-    TYPE = "msc"
+    TYPE = MsgFields.MSC
     def __init__(self, msc):
         self.msc = msc
         super().__init__()
 
     def get_data(self):
         res = super().get_data()
-        res['msc'] = self.msc.pem
+        res[MsgFields.MSC] = self.msc.pem
         return dict_to_json(res)
 
 
@@ -62,7 +63,7 @@ class CertificateEntry(TreeEntry):
     Representation of a MSC and its revocation (optional). These entries build
     the CertificateTree.
     """
-    TYPE = "msc_rev"
+    TYPE = MsgFields.MSC_REV
     def __init__(self, msc, rev=None):
         self.msc = msc
         self.rev = rev or None
@@ -70,8 +71,8 @@ class CertificateEntry(TreeEntry):
 
     def get_data(self):
         res = super().get_data()
-        res['msc'] = self.msc.pem
-        res['rev'] = self.rev.raw
+        res[MsgFields.MSC] = self.msc.pem
+        res[MsgFields.REV] = self.rev.raw
         return dict_to_json(res)
 
     def get_label(self):
@@ -79,14 +80,14 @@ class CertificateEntry(TreeEntry):
 
 
 class SCPEntry(TreeEntry):
-    TYPE = "scp"
+    TYPE = MsgFields.SCP
     def __init__(self, scp):
         self.scp = scp
         super().__init__()
 
     def get_data(self):
         res = super().get_data()
-        res['scp'] = self.scp.pem
+        res[MsgFields.SCP] = self.scp.pem
         return dict_to_json(res)
 
     def get_label(self):
@@ -94,13 +95,13 @@ class SCPEntry(TreeEntry):
 
 
 class RootsEntry(TreeEntry):
-    TYPE = "roots"
+    TYPE = MsgFields.ROOTS
     def __init__(self, policy_tree_root, cert_tree_root):
         self.policy_tree_root = policy_tree_root
         self.cert_tree_root = cert_tree_root
 
     def get_data(self):
         res = super().get_data()
-        res['policy_root'] = self.policy_tree_root
-        res['cert_root'] = self.cert_tree_root
+        res[MsgFields.POLICY_ROOT] = self.policy_tree_root
+        res[MsgFields.CERT_ROOT] = self.cert_tree_root
         return dict_to_json(res)

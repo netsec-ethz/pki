@@ -53,7 +53,11 @@ class BaseTree(MerkleTree):
         raise NotImplementedError
 
 
-class ApendOnlyTree(BaseTree):
+class ConsistencyTree(BaseTree):
+    """
+    Tree that contains all object in chronological order. See Section 5.3 and
+    Figure 5 from the PoliCert paper.
+    """
     def add(self, entry):
         self.entries.append(entry)
         self.leaves.append(Node(entry.get_data()))
@@ -96,13 +100,6 @@ class SortedTree(BaseTree):
         proof1 = get_proof_idx(index1)
         proof2 = get_proof_idx(index2)
         return (proof1, proof2)
-
-
-class ConsistencyTree(AppendOnlyTree):
-    """
-    Tree that contains all object in chronological order. See Section 5.3 and
-    Figure 5 from the PoliCert paper.
-    """
 
 
 class CertificateTree(SortedTree):

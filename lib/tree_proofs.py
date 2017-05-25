@@ -15,6 +15,7 @@ from base64 import b64decode, b64encode
 
 from merkle import join_chains  # TODO(PSz): rather re-implement
 
+from .defines import MsgFields
 from .utils import dict_to_json
 
 
@@ -30,7 +31,7 @@ class BaseProof(object):
         raise NotImplementedError
 
     def pack(self):
-        return {"type": self.TYPE}
+        return {MsgFields.TYPE: self.TYPE}
 
     def verify(self, external_root=None):
         raise NotImplementedError
@@ -43,7 +44,7 @@ class BaseProof(object):
 
 
 class PresenceProof(ProofBase):
-    TYPE = "presence"
+    TYPE = MsgFields.PRESENCE_PROOF
     def __init__(self, raw=None):
         self.entry = None
         self.chain = None
@@ -63,7 +64,7 @@ class AbsenceProof(ProofBase):
     """
     TODO(PSz): describe how it is encoded
     """
-    TYPE = "absence"
+    TYPE = MsgFields.ABSENCE_PROOF
     def __init__(self, raw=None):
         """
         Absence proof consists of two presence proofs.

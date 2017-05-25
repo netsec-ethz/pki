@@ -14,5 +14,6 @@
 import json
 
 
+# FIXME(PSz): to be replaced by canonical CBOR
 def dict_to_json(dict_):
     return json.dumps(dict_, sort_keys=True)
