@@ -37,11 +37,11 @@ class BaseTree(MerkleTree):
         for entry in entries:
             leaves.append(entry.get_data())
         super().__init__(leaves)
-        self.need_rebuild = True 
+        self.needs_rebuild = True
 
     def build(self):
         super().build()
-        self.need_rebuild = False
+        self.needs_rebuild = False
 
     def get_root(self):
         if self.root:
@@ -106,7 +106,7 @@ class SortedTree(BaseTree):
         return None
 
     def get_idx_for_hash(self, hash_):
-        bisect.bisect_left(self.leaves, hash_)
+        return bisect.bisect_left(self.leaves, hash_)
 
     def get_proof(self, entry):
         if not self.entries:
@@ -152,7 +152,7 @@ class PolicySubTree(SortedTree):
     of X.a.com, or all TLD policies). Entries of the tree are sorted. See
     Section 5.3 and Figure 4 from the PoliCert paper.
     """
-    def __init__(self, entries):
+    def __init__(self, entries=None):
         super().__init__(entries)  # Sorted tree
 
     def _handle_existing_entry(self, index, entry):
@@ -183,18 +183,22 @@ class PolicyTree(object):
             return
         tree = self.tld_tree
         entry = None
-        for name in get_domains(scp.domain_name):
+        # Go to the last subtree, creating intermediate ones (if necessary)
+        for name in get_domains(scp.domain_name)[-1]:
             if not tree:
+                print()
                 tree = PolicySubTree()
+                if entry:
+                    entry.subtree = tree
             entry = tree.get_entry(name)
             if not entry:
                 entry = PolicyEntry(name)
                 tree.add(entry)
             tree = entry.subtree
+        # Now add entry with SCP
+        entry = PolicyEntry(name, scp)
+        tree.add(entry)
 
-        # subtree = self.find_subtree(scp.domain_name, True)
-        # print(subtree)
-        # entry = PolicyEntry(scp, subtree.subtree)
 
     def get_root(self):
         return self.tld_tree.get_root()
