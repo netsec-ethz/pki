@@ -73,15 +73,22 @@ if __name__ == "__main__":
 from pki.lib.tree_entries import *
 from pki.lib.trees import *
 import copy
+import random
+import string
+
+def random_dn(length, level=0):
+   return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
 
 scps = []
 mscs = []
 certs = []
-for i in range(1000):
+policies = []
+for i in range(10):
     tmp = copy.copy(scp)
     tmp.pem = b"SCPpem: %d" % i
-    tmp.domain_name = str(i)
+    tmp.domain_name = random_dn(5)
     scps.append(SCPEntry(tmp))
+    policies.append(PolicyEntry(tmp.domain_name, tmp))
     #
     tmp = copy.copy(msc)
     tmp.pem = b"MSCpem: %d" % i
@@ -89,8 +96,10 @@ for i in range(1000):
     mscs.append(MSCEntry(tmp))
     certs.append(CertificateEntry(tmp))
 
-import random
 random.shuffle(certs)
 chrontree = ConsistencyTree(scps+mscs)
+# print(chrontree)
 certtree = CertificateTree(certs)
-
+print(certtree)
+polsub = PolicySubTree(policies)
+print(polsub)

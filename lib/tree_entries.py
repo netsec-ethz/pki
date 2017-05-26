@@ -115,7 +115,9 @@ class PolicyEntry(TreeEntry):
     Representation of an SCP and its subtree. These entries build the PolicyTree.
     """
     TYPE = MsgFields.POLICY
-    def __init__(self, scp, subtree=None):
+    def __init__(self, domain_name, scp=None, subtree=None):
+        self.domain_name =  domain_name
+            assert scp.domain_name == self.domain_name
         self.scp = scp
         self.subtree = subtree
         super().__init__()
@@ -130,4 +132,4 @@ class PolicyEntry(TreeEntry):
         return dict_to_cbor(res)
 
     def get_label(self):
-        return self.scp.domain_name
+        return self.domain_name

@@ -52,6 +52,12 @@ class BaseTree(MerkleTree):
     def add_adjust(self, data, prehashed=False):  # Ditto
         raise NotImplementedError
 
+    def __str__(self):
+        return self.__class__.__name__ + ": "
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class ConsistencyTree(BaseTree):
     """
@@ -127,6 +133,11 @@ class CertificateTree(SortedTree):
     def add_revocation(self, rev):
         raise NotImplementedError
 
+    def __str__(self):
+        l = []
+        for e in self.entries:
+            l.append(e.get_label().hex()[:10]+"...")
+        return super().__str__() + "  ".join(l)
 
 class PolicySubTree(SortedTree):
     """
@@ -134,16 +145,20 @@ class PolicySubTree(SortedTree):
     of X.a.com, or all TLD policies). Entries of the tree are sorted. See
     Section 5.3 and Figure 4 from the PoliCert paper.
     """
-    def __init__(self, domain_name, entries=None):
-        super().__init__(entries, True)  # Sorted tree
-        self.domain_name = domain_name
-        self.subtree = None  # Pointer to a child tree
+    def __init__(self, entries):
+        super().__init__(entries)  # Sorted tree
 
     def _handle_existing_entry(self, index, entry):
         logging.info("updating policy entry: %s by %s" % (self.entries[index], entry))
-        # PSz: Check version here?
+        # PSz: Check version here?(rather when accepting the entry)
         self.entries[index].scp = entry.scp
         self.leaves[index] = Node(self.entries[index].get_data())
+
+    def __str__(self):
+        l = []
+        for e in self.entries:
+            l.append(e.get_label())
+        return super().__str__() + "  ".join(l)
 
 class PolicyTree(object):
     """
@@ -174,8 +189,8 @@ class PolicyTree(object):
 
     def find_subtree(self, domain_name, create=False):
         tree = self.tld_tree
-        for name in reversed(domain_name.split(".")):
-            if tree.
+        # for name in reversed(domain_name.split(".")):
+        #     if tree.
 
     def add_revocation(self, rev):
         raise NotImplementedError
