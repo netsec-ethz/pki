@@ -75,24 +75,40 @@ from pki.lib.trees import *
 import copy
 import random
 import string
+from collections import defaultdict
 
-def random_dn(length, level=0):
+def random_word(length):
    return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
+
+def random_domain_names(level=3, per_level=2, length=2):
+    names = defaultdict(list)
+    for level_ in range(level):
+        for per_level_ in range(per_level):
+            if not level_: # TLD
+                names[level_].append(random_word(length))
+            else:
+                for upper in names[level_-1]:
+                    names[level_].append(random_word(length)+"."+upper)
+    res = []
+    for i in names:
+        res += names[i]
+    random.shuffle(res)
+    return res
 
 scps = []
 mscs = []
 certs = []
 policies = []
-for i in range(10):
+for i in random_domain_names():
     tmp = copy.copy(scp)
-    tmp.pem = b"SCPpem: %d" % i
-    tmp.domain_name = random_dn(5)
+    tmp.pem = b"SCPpem: %s" % bytes(i, "utf-8")
+    tmp.domain_name = i
     scps.append(SCPEntry(tmp))
     policies.append(PolicyEntry(tmp.domain_name, tmp))
     #
     tmp = copy.copy(msc)
-    tmp.pem = b"MSCpem: %d" % i
-    tmp.domain_name = str(i)
+    tmp.pem = b"MSCpem: %s" % bytes(i, "utf-8")
+    tmp.domain_name = i
     mscs.append(MSCEntry(tmp))
     certs.append(CertificateEntry(tmp))
 

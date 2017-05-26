@@ -116,7 +116,8 @@ class PolicyEntry(TreeEntry):
     """
     TYPE = MsgFields.POLICY
     def __init__(self, domain_name, scp=None, subtree=None):
-        self.domain_name =  domain_name
+        self.domain_name = domain_name
+        if scp:
             assert scp.domain_name == self.domain_name
         self.scp = scp
         self.subtree = subtree
