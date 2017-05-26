@@ -176,8 +176,8 @@ class PolicyTree(object):
         for e in entries or []:
             self.add(e)
 
-    def add(self, scp):
-        domain_name = scp.domain_name
+    def add(self, scp_entry):
+        domain_name = scp_entry.domain_name
         if not domain_name:
             logging.error("Trying to add policy for dn: %s" % domain_name)
             return
@@ -197,8 +197,8 @@ class PolicyTree(object):
                 if entry:
                     print("Created subtree assigned to entry: %s" % entry.get_label())
                     entry.subtree = tree
-        # Now add entry with SCP (it updates it if existing)
-        tree.add(scp)
+        # Now add/update entry with SCP
+        tree.add(scp_entry)
 
     def get_entry(self, label):
         tree = self.tld_tree
