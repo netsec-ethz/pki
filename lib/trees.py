@@ -94,9 +94,7 @@ class SortedTree(BaseTree):
             self.leaves.insert(idx, Node(entry.get_data()))
 
     def _handle_existing_entry(self, idx, entry):
-        logging.info("Replacing entry: %s by %s" % (self.entries[idx], entry))
-        # self.entries[idx] = entry
-        # self.leaves[idx] = Node(entry.get_data())
+        raise NotImplementedError
 
     def get_idx_for_label(self, label):
         keys = [e.get_label() for e in self.entries]
@@ -137,6 +135,9 @@ class CertificateTree(SortedTree):
 
     def add_revocation(self, rev):
         raise NotImplementedError
+
+    def _handle_existing_entry(self, idx, entry):
+        logging.error("Entry with the label exists: %s" % entry.get_label())
 
     def __str__(self):
         l = []
