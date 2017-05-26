@@ -16,3 +16,16 @@ import cbor
 # FIXME(PSz): to be replaced by canonical CBOR
 def dict_to_cbor(dict_):
     return cbor.dumps(dict_, sort_keys=True)
+
+def get_domains(domain_name):
+    """
+    For a domain name returns sorted list of all domain names included in it.
+    For example, for "www.a.com" it returns ['com', 'a.com', www.a.com']
+    """
+    res = []
+    tmp = ""
+    print(domain_name)
+    for name in reversed(domain_name.split(".")):
+        tmp = name + "." + tmp
+        res.append(tmp[:-1])
+    return res

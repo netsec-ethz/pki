@@ -31,9 +31,10 @@ class TreeEntry(object):
         return self.get_label() < other.get_label()
 
     def __eq__(self, other):
-        return self.get_data() == other.get_data()
+        return self.get_label() == other.get_label()
 
 
+# PSz: consider id as get_label() for entries of ConsistencyTree
 class RevocationEntry(TreeEntry):
     TYPE = MsgFields.REV
     def __init__(self, rev):

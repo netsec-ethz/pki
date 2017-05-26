@@ -19,10 +19,12 @@ from merkle import MerkleTree, Node, hash_function
 from .tree_entries import (
     CertificateEntry,
     MSCEntry,
+    PolicyEntry,
     RevocationEntry,
     RootsEntry,
     SCPEntry,
     )
+from .utils import get_domains
 
 
 class BaseTree(MerkleTree):
@@ -35,11 +37,16 @@ class BaseTree(MerkleTree):
         for entry in entries:
             leaves.append(entry.get_data())
         super().__init__(leaves)
+        self.need_rebuild = True 
+
+    def build(self):
+        super().build()
+        self.need_rebuild = False
 
     def get_root(self):
         if self.root:
             return self.root.val
-        return hash_function(b"").digest()
+        return None
 
     def get_proof_idx(self, index):
         if 0 <= index < len(self.leaves):
@@ -166,12 +173,42 @@ class PolicyTree(object):
     the trees are sorted. See Section 5.3 and Figure 4 from the PoliCert paper.
     """
     def __init__(self, entries=None):
-        self.tld_tree = None
-        if entries:
-            self.create_trees(entries)
+        self.tld_tree = PolicySubTree()
+        for e in entries or []:
+            self.add(e)
 
-    def create_trees(self, entries):
-        raise NotImplementedError
+    def add(self, scp):
+        if not scp.domain_name:
+            logging.error("Trying to add policy for dn: %s" % scp.domain_name)
+            return
+        tree = self.tld_tree
+        entry = None
+        for name in get_domains(scp.domain_name):
+            if not tree:
+                tree = PolicySubTree()
+            entry = tree.get_entry(name)
+            if not entry:
+                entry = PolicyEntry(name)
+                tree.add(entry)
+            tree = entry.subtree
+
+        # subtree = self.find_subtree(scp.domain_name, True)
+        # print(subtree)
+        # entry = PolicyEntry(scp, subtree.subtree)
+
+    def get_root(self):
+        return self.tld_tree.get_root()
+
+    def get_entry(self, domain_name):
+        tree = self.tld_tree
+        entry = None
+        for name in get_domains(domain_name):
+            if not tree:
+                return None
+            entry = tree.get_entry(name)
+            if not entry:
+                return None
+        return entry
 
     def get_entry(self, domain_name):
         tree = self.tld_tree
@@ -182,15 +219,6 @@ class PolicyTree(object):
             entry = tree.get_entry(name)
             tree = entry.subtree
         return entry
-
-    def add(self, scp):
-        subtree = self.find_subtree(domain_name, True)
-        entry = PolicyEntry(scp, subtree.subtree)
-
-    def find_subtree(self, domain_name, create=False):
-        tree = self.tld_tree
-        # for name in reversed(domain_name.split(".")):
-        #     if tree.
 
     def add_revocation(self, rev):
         raise NotImplementedError

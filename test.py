@@ -77,10 +77,9 @@ import random
 import string
 from collections import defaultdict
 
-def random_word(length):
-   return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
-
 def random_domain_names(level=3, per_level=2, length=2):
+    def random_word(length):
+       return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
     names = defaultdict(list)
     for level_ in range(level):
         for per_level_ in range(per_level):
@@ -99,7 +98,7 @@ scps = []
 mscs = []
 certs = []
 policies = []
-for i in random_domain_names():
+for i in random_domain_names()[:1]:
     tmp = copy.copy(scp)
     tmp.pem = b"SCPpem: %s" % bytes(i, "utf-8")
     tmp.domain_name = i
@@ -119,3 +118,6 @@ certtree = CertificateTree(certs)
 print(certtree)
 polsub = PolicySubTree(policies)
 print(polsub)
+
+print("\n\n\n")
+poltree = PolicyTree(policies)
