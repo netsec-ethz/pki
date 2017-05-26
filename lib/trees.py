@@ -84,8 +84,9 @@ class SortedTree(BaseTree):
         super().__init__(tmp)
 
     def add(self, entry):
-        index = self.get_idx_for_entry(entry)
-        if self.entries and self.entries[index] == entry:
+        label = entry.get_label()
+        index = self.get_idx_for_label(label)
+        if self.entries and label == self.entries[index].get_label():
             self._handle_existing_entry(index, entry)
         else:
             self.entries.insert(index, entry)
@@ -96,13 +97,14 @@ class SortedTree(BaseTree):
         # self.entries[index] = entry
         # self.leaves[index] = Node(entry.get_data())
 
-    def get_idx_for_entry(self, entry):
-        bisect.bisect_left(self.entries, entry)
+    def get_idx_for_label(self, label):
+        keys = [e.get_label() for e in self.entries]
+        return bisect.bisect_left(keys, label)
 
     def get_entry(self, label):
-        idx = self.get_idx_for_entry(label)
+        idx = self.get_idx_for_label(label)
         if label == self.entries[idx].get_label():
-            return self.entries[idx].get_label()
+            return self.entries[idx]
         return None
 
     def get_idx_for_hash(self, hash_):
@@ -111,7 +113,7 @@ class SortedTree(BaseTree):
     def get_proof(self, entry):
         if not self.entries:
             return None
-        index = get_idx_for_entry(entry)
+        index = get_idx_for_label(entry)
         if self.entries[index] == entry:
             return self.get_proof_idx(index)
         else:
@@ -133,9 +135,6 @@ class CertificateTree(SortedTree):
     def __init__(self, entries=None):
         # PSz: Consider a list of accepted requests
         super().__init__(entries)  # Sorted tree
-
-    def get_entry_by_hash(self, hash_):
-        raise NotImplementedError
 
     def add_revocation(self, rev):
         raise NotImplementedError
@@ -199,14 +198,10 @@ class PolicyTree(object):
         entry = PolicyEntry(name, scp)
         tree.add(entry)
 
-
-    def get_root(self):
-        return self.tld_tree.get_root()
-
-    def get_entry(self, domain_name):
+    def get_entry(self, label):
         tree = self.tld_tree
         entry = None
-        for name in get_domains(domain_name):
+        for name in get_domains(label):
             if not tree:
                 return None
             entry = tree.get_entry(name)
@@ -214,18 +209,11 @@ class PolicyTree(object):
                 return None
         return entry
 
-    def get_entry(self, domain_name):
-        tree = self.tld_tree
-        entry = None
-        for name in reversed(domain_name.split(".")):
-            if not tree:
-                return None
-            entry = tree.get_entry(name)
-            tree = entry.subtree
-        return entry
-
     def add_revocation(self, rev):
         raise NotImplementedError
+
+    def get_root(self):
+        return self.tld_tree.get_root()
 
     def build(self):
         raise NotImplementedError  # rebuild all trees

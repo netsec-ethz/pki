@@ -98,7 +98,8 @@ scps = []
 mscs = []
 certs = []
 policies = []
-for i in random_domain_names()[:1]:
+domain_names = random_domain_names()
+for i in domain_names:
     tmp = copy.copy(scp)
     tmp.pem = b"SCPpem: %s" % bytes(i, "utf-8")
     tmp.domain_name = i
@@ -116,8 +117,11 @@ chrontree = ConsistencyTree(scps+mscs)
 # print(chrontree)
 certtree = CertificateTree(certs)
 print(certtree)
+label = certs[0].get_label()
+print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
 polsub = PolicySubTree(policies)
 print(polsub)
+print(polsub.get_entry(domain_names[0]))
 
 print("\n\n\n")
 poltree = PolicyTree(policies)
