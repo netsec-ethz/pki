@@ -16,7 +16,7 @@ from base64 import b64decode, b64encode
 from merkle import join_chains  # TODO(PSz): rather re-implement
 
 from .defines import MsgFields
-from .utils import dict_to_json
+from .utils import dict_to_cbor
 
 
 class BaseProof(object):
@@ -53,7 +53,7 @@ class PresenceProof(ProofBase):
     def pack(self):
         tmp = super().__pack__()
         # TODO(PSz): other fields + base64
-        return dict_to_json(tmp)
+        return dict_to_cbor(tmp)
 
     @classmethod
     def from_values(cls, entry_chain_list):
@@ -79,7 +79,7 @@ class AbsenceProof(ProofBase):
     def pack(self):
         tmp = super().__pack__()
         # TODO(PSz): other fields + base64
-        return dict_to_json(tmp)
+        return dict_to_cbor(tmp)
 
     @classmethod
     def from_values(cls, proof1, proof2):
