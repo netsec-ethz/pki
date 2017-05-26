@@ -126,7 +126,10 @@ class PolicyEntry(TreeEntry):
 
     def get_data(self):
         res = super().get_data()
-        res[MsgFields.SCP] = self.scp.pem
+        if self.scp:
+            res[MsgFields.SCP] = self.scp.pem
+        else:
+            res[MsgFields.SCP] = None
         if self.subtree:
             res[MsgFields.SUBROOT] = self.subtree.root
         else:

@@ -86,7 +86,8 @@ class SortedTree(BaseTree):
     def add(self, entry):
         label = entry.get_label()
         index = self.get_idx_for_label(label)
-        if self.entries and label == self.entries[index].get_label():
+        print(self.entries, index)
+        if self.entries and index < len(self.entries) and label == self.entries[index].get_label():
             self._handle_existing_entry(index, entry)
         else:
             self.entries.insert(index, entry)
@@ -103,12 +104,9 @@ class SortedTree(BaseTree):
 
     def get_entry(self, label):
         idx = self.get_idx_for_label(label)
-        if label == self.entries[idx].get_label():
+        if self.entries and idx < len(self.entries) and label == self.entries[idx].get_label():
             return self.entries[idx]
         return None
-
-    def get_idx_for_hash(self, hash_):
-        return bisect.bisect_left(self.leaves, hash_)
 
     def get_proof(self, entry):
         if not self.entries:
@@ -177,26 +175,28 @@ class PolicyTree(object):
             self.add(e)
 
     def add(self, scp):
-        if not scp.domain_name:
-            logging.error("Trying to add policy for dn: %s" % scp.domain_name)
+        domain_name = scp.domain_name
+        if not domain_name:
+            logging.error("Trying to add policy for dn: %s" % domain_name)
             return
         tree = self.tld_tree
         entry = None
         # Go to the last subtree, creating intermediate ones (if necessary)
-        for name in get_domains(scp.domain_name)[-1]:
-            if not tree:
-                print()
-                tree = PolicySubTree()
-                if entry:
-                    entry.subtree = tree
+        for name in get_domains(domain_name)[:-1]:
             entry = tree.get_entry(name)
             if not entry:
+                print("Creating entry for %s" % name)
                 entry = PolicyEntry(name)
                 tree.add(entry)
             tree = entry.subtree
-        # Now add entry with SCP
-        entry = PolicyEntry(name, scp)
-        tree.add(entry)
+            if not tree:
+                print("Creating subtree for %s" % name)
+                tree = PolicySubTree()
+                if entry:
+                    print("Created subtree assigned to entry: %s" % entry.get_label())
+                    entry.subtree = tree
+        # Now add entry with SCP (it updates it if existing)
+        tree.add(scp)
 
     def get_entry(self, label):
         tree = self.tld_tree
