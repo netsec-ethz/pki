@@ -219,3 +219,14 @@ class PolicyTree(object):
 
     def build(self):
         raise NotImplementedError  # rebuild all trees
+
+    def __str__(self):
+        res = []
+        get_tree_str(self.tld_tree, res, 1)
+        return "Policy Tree:\n" + "\n".join(res)
+
+def get_tree_str(tree, res, level):
+    res.append("   "*level + str(tree))
+    for entry in tree.entries:
+        if entry.subtree:
+            get_tree_str(entry.subtree, res, level+1)

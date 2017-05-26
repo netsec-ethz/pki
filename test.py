@@ -98,7 +98,7 @@ scps = []
 mscs = []
 certs = []
 policies = []
-domain_names = random_domain_names()
+domain_names = random_domain_names(level=5)
 for i in domain_names:
     tmp = copy.copy(scp)
     tmp.pem = b"SCPpem: %s" % bytes(i, "utf-8")
@@ -125,3 +125,4 @@ print(polsub)
 print(polsub.get_entry(domain_names[0])==policies[0])
 print()
 poltree = PolicyTree(policies)
+print(poltree)
