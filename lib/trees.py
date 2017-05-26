@@ -48,9 +48,9 @@ class BaseTree(MerkleTree):
             return self.root.val
         return None
 
-    def get_proof_idx(self, index):
-        if 0 <= index < len(self.leaves):
-            return self.get_chain(index)
+    def get_proof_idx(self, idx):
+        if 0 <= idx < len(self.leaves):
+            return self.get_chain(idx)
         return None
 
     def add_hash(self, value):  # Not needed and may be confusing, don't implement
@@ -85,18 +85,18 @@ class SortedTree(BaseTree):
 
     def add(self, entry):
         label = entry.get_label()
-        index = self.get_idx_for_label(label)
-        print(self.entries, index)
-        if self.entries and index < len(self.entries) and label == self.entries[index].get_label():
-            self._handle_existing_entry(index, entry)
+        idx = self.get_idx_for_label(label)
+        entries_no = len(self.entries)
+        if entries_no and idx < entries_no and label == self.entries[idx].get_label():
+            self._handle_existing_entry(idx, entry)
         else:
-            self.entries.insert(index, entry)
-            self.leaves.insert(index, Node(entry.get_data()))
+            self.entries.insert(idx, entry)
+            self.leaves.insert(idx, Node(entry.get_data()))
 
-    def _handle_existing_entry(self, index, entry):
-        logging.info("Replacing entry: %s by %s" % (self.entries[index], entry))
-        # self.entries[index] = entry
-        # self.leaves[index] = Node(entry.get_data())
+    def _handle_existing_entry(self, idx, entry):
+        logging.info("Replacing entry: %s by %s" % (self.entries[idx], entry))
+        # self.entries[idx] = entry
+        # self.leaves[idx] = Node(entry.get_data())
 
     def get_idx_for_label(self, label):
         keys = [e.get_label() for e in self.entries]
@@ -104,23 +104,24 @@ class SortedTree(BaseTree):
 
     def get_entry(self, label):
         idx = self.get_idx_for_label(label)
-        if self.entries and idx < len(self.entries) and label == self.entries[idx].get_label():
+        entries_no = len(self.entries)
+        if entries_no and idx < entries_no and label == self.entries[idx].get_label():
             return self.entries[idx]
         return None
 
     def get_proof(self, entry):
         if not self.entries:
             return None
-        index = get_idx_for_label(entry)
-        if self.entries[index] == entry:
-            return self.get_proof_idx(index)
+        idx = get_idx_for_label(entry)
+        if self.entries[idx] == entry:
+            return self.get_proof_idx(idx)
         else:
-            return self.get_absence_proof_idx(index-1, index)
+            return self.get_absence_proof_idx(idx-1, idx)
 
-    def get_absence_proof_idx(self, index1, index2):
+    def get_absence_proof_idx(self, idx1, idx2):
         # TODO(PSz): entries should be returned as well
-        proof1 = get_proof_idx(index1)
-        proof2 = get_proof_idx(index2)
+        proof1 = get_proof_idx(idx1)
+        proof2 = get_proof_idx(idx2)
         return (proof1, proof2)
 
 
@@ -152,11 +153,11 @@ class PolicySubTree(SortedTree):
     def __init__(self, entries=None):
         super().__init__(entries)  # Sorted tree
 
-    def _handle_existing_entry(self, index, entry):
-        logging.info("updating policy entry: %s by %s" % (self.entries[index], entry))
+    def _handle_existing_entry(self, idx, entry):
+        logging.info("updating policy entry: %s by %s" % (self.entries[idx], entry))
         # PSz: Check version here?(rather when accepting the entry)
-        self.entries[index].scp = entry.scp
-        self.leaves[index] = Node(self.entries[index].get_data())
+        self.entries[idx].scp = entry.scp
+        self.leaves[idx] = Node(self.entries[idx].get_data())
 
     def __str__(self):
         l = []
