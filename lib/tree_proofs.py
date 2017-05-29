@@ -120,7 +120,7 @@ class AbsenceProof(BaseProof):
             return False
         if not self._sibling_proofs():
             return False
-        return False
+        return True
 
     def _single_proof(self, entry, external_root):
         """
