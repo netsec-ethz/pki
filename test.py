@@ -121,11 +121,14 @@ label = certs[0].get_label()
 print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
 for c in certtree.entries :
     l = c.get_label()
-    print("Presence proof", certtree.get_proof(l))
+    p = certtree.get_proof(l)
+    print("Presence proof", p)
     l += b"123"
-    print("Absence proof1", certtree.get_proof(l))
+    p = certtree.get_proof(l)
+    print("Absence proof1", p)
     l = l[:5]
-    print("Absence proof2", certtree.get_proof(l))
+    p = certtree.get_proof(l)
+    print("Absence proof2", p)
     print()
 sys.exit()
 print()

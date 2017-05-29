@@ -70,11 +70,13 @@ class PresenceProof(BaseProof):
         """
         return self.chain[0][0]
 
-    def validate(self, external_root=None):
+    def validate(self, entry=None, external_root=None):
         if not self.entry or not self.chain:
             return False  # Incomplete proof
         if external_root and external_root != self.get_root():
             return False  # Roots mismatch
+        if entry and entry.get_hash() != self.entry.get_hash():
+            return False  # Proof is constructed for other entry
         if self.get_entry_hash() != self.entry.get_hash():
             return False  # Hash of the entry doesn't match the proof
         try:
@@ -85,6 +87,7 @@ class PresenceProof(BaseProof):
 
     def __str__(self):
         return "Entry: %s, Chain: %s" % (self.entry, self.chain)
+
 
 class AbsenceProof(BaseProof):
     """
@@ -98,6 +101,56 @@ class AbsenceProof(BaseProof):
         self.proof1 = None
         self.proof2 = None
         super().__init__(raw)
+
+    def validate(self, entry, external_root=None):
+        if not self.proof1 and not self.proof2:
+            return False  # Incomplete proof
+        elif not self.proof1 or not self.proof2:  # Handle cases with one proof
+            return self._single_proof(entry, external_root)
+
+        # Handle the common case (two presence proofs)
+        if not (self.proof1.entry < entry < self.proof2.entry):  # Entry must be between
+            return False
+        if not self.proof1.validate(external_root=external_root):
+            return False
+        if not self.proof2.validate(external_root=external_root):
+            return False
+        if self.proof1.get_root() != self.proof2.get_root():  # Check if the tree is the
+            return False
+        if external_root and external_root != self.proof1.get_root():
+            return False
+        if not self._sibling_proofs()
+        return False
+
+    def _single_proof(self, entry, external_root):
+        """
+        Single proof validation (corner case).
+        """
+        if self.proof1:
+            if self.proof1.entry <= entry:
+                return False
+            char = 'L'
+            chain = self.proof1.chain
+            proof = self.proof1
+        else:
+            if self.proof1.entry >= entry:
+                return False
+            char = 'R'
+            chain = self.proof1.chain
+            proof = self.proof2
+
+        # This has to be the most left or right root
+        for _, tmp in chain[1:-1]:  # Don't check 'SELF' and 'ROOT'
+            if tmp != char:
+                return False
+        if not proof.validate(external_root=external_root):
+            return False
+        return True
+
+    def _sibling_proofs(self):
+        # TODO(PSz): ensure that proof1 and proof2 are for the siblings entries
+        # Probably, need to add tree size at least
+        return True
 
     def parse(self, raw):
         pass
