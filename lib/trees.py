@@ -37,11 +37,6 @@ class BaseTree(MerkleTree):
         for entry in entries:
             leaves.append(entry.get_data())
         super().__init__(leaves)
-        self.needs_rebuild = True
-
-    def build(self):
-        super().build()
-        self.needs_rebuild = False
 
     def get_root(self):
         if self.root:
@@ -217,16 +212,27 @@ class PolicyTree(object):
     def get_root(self):
         return self.tld_tree.get_root()
 
-    def build(self):
-        raise NotImplementedError  # rebuild all trees
+    def build(self, tree=None):
+        """
+        Rebuild the Policy Tree by building all trees top-down.
+        TODO(PSz): This could be optimized: a subtree does now have to be rebuilt if it
+        itself and all its subtrees were not modified.
+        """
+        if tree is None:
+            return self.build(self.tld_tree)
+        for entry in tree.entries:
+            if entry.subtree:
+                self.build(entry.subtree)
+        print("Building: %s" % tree)
+        tree.build()
 
     def __str__(self):
+        def get_tree_str(tree, res, level):
+            res.append("   "*level + str(tree))
+            for entry in tree.entries:
+                if entry.subtree:
+                    get_tree_str(entry.subtree, res, level+1)
         res = []
         get_tree_str(self.tld_tree, res, 1)
         return "Policy Tree:\n" + "\n".join(res)
 
-def get_tree_str(tree, res, level):
-    res.append("   "*level + str(tree))
-    for entry in tree.entries:
-        if entry.subtree:
-            get_tree_str(entry.subtree, res, level+1)
