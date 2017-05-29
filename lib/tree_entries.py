@@ -33,7 +33,7 @@ class TreeEntry(object):
     def __lt__(self, other):
         return self.get_label() < other.get_label()
 
-    def __eq__(self, other):
+    def __eq__(self, other):  # FIXME(PSz): That may be misleading, get_data()?
         return self.get_label() == other.get_label()
 
 

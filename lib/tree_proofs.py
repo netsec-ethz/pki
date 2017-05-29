@@ -13,7 +13,7 @@
 # limitations under the License.
 from base64 import b64decode, b64encode
 
-from merkle import join_chains  # TODO(PSz): rather re-implement
+from merkle import check_chain, MerkleError
 
 from .defines import MsgFields
 from .utils import dict_to_cbor
@@ -75,10 +75,13 @@ class PresenceProof(BaseProof):
             return False  # Incomplete proof
         if external_root and external_root != self.get_root():
             return False  # Roots mismatch
-        if self.get_entry_hash() != self.entry.get_hash()
+        if self.get_entry_hash() != self.entry.get_hash():
             return False  # Hash of the entry doesn't match the proof
-
-
+        try:
+            check_chain(self.chain)
+        except MerkleError:
+            return False  # Chain verification failed
+        return True
 
     def __str__(self):
         return "Entry: %s, Chain: %s" % (self.entry, self.chain)
