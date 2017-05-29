@@ -24,7 +24,6 @@ def get_domains(domain_name):
     """
     res = []
     tmp = ""
-    print(domain_name)
     for name in reversed(domain_name.split(".")):
         tmp = name + "." + tmp
         res.append(tmp[:-1])
