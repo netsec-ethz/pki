@@ -91,7 +91,6 @@ class PresenceProof(BaseProof):
 
 class AbsenceProof(BaseProof):
     """
-    TODO(PSz): describe how it is encoded
     """
     TYPE = MsgFields.ABSENCE_PROOF
     def __init__(self, raw=None):
@@ -119,7 +118,8 @@ class AbsenceProof(BaseProof):
             return False
         if external_root and external_root != self.proof1.get_root():
             return False
-        if not self._sibling_proofs()
+        if not self._sibling_proofs():
+            return False
         return False
 
     def _single_proof(self, entry, external_root):
