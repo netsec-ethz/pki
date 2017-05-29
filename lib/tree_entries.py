@@ -24,6 +24,9 @@ class TreeEntry(object):
     def get_data(self):
         return {MsgFields.TYPE: self.TYPE}
 
+    def get_hash(self):
+        return hash_function(self.get_data()).digest()
+
     def get_label(self):  # Have to be implemented for entries of sorted trees
         raise NotImplementedError
 

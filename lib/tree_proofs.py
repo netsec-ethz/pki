@@ -33,7 +33,7 @@ class BaseProof(object):
     def pack(self):
         return {MsgFields.TYPE: self.TYPE}
 
-    def verify(self, external_root=None):
+    def validate(self, external_root=None):
         raise NotImplementedError
 
     def join(self, higher_proof):
@@ -43,7 +43,7 @@ class BaseProof(object):
         raise NotImplementedError
 
 
-class PresenceProof(ProofBase):
+class PresenceProof(BaseProof):
     TYPE = MsgFields.PRESENCE_PROOF
     def __init__(self, raw=None):
         self.entry = None
@@ -56,11 +56,34 @@ class PresenceProof(ProofBase):
         return dict_to_cbor(tmp)
 
     @classmethod
-    def from_values(cls, entry_chain_list):
-        raise NotImplementedError
+    def from_values(cls, entry, chain):
+        inst = cls()
+        inst.entry, inst.chain = entry, chain
+        return inst
+
+    def get_root(self):
+        return self.chain[-1][0]
+
+    def get_entry_hash(self):
+        """
+        Get entry hash from the chain.
+        """
+        return self.chain[0][0]
+
+    def validate(self, external_root=None):
+        if not self.entry or not self.chain:
+            return False  # Incomplete proof
+        if external_root and external_root != self.get_root():
+            return False  # Roots mismatch
+        if self.get_entry_hash() != self.entry.get_hash()
+            return False  # Hash of the entry doesn't match the proof
 
 
-class AbsenceProof(ProofBase):
+
+    def __str__(self):
+        return "Entry: %s, Chain: %s" % (self.entry, self.chain)
+
+class AbsenceProof(BaseProof):
     """
     TODO(PSz): describe how it is encoded
     """
@@ -87,3 +110,6 @@ class AbsenceProof(ProofBase):
         inst.proof1 = proof1
         inst.proof2 = proof2
         return inst
+
+    def __str__(self):
+        return "Proof1: %s\nProof2: %s" % (self.proof1, self.proof2)

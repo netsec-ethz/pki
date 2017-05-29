@@ -24,6 +24,7 @@ from .tree_entries import (
     RootsEntry,
     SCPEntry,
     )
+from .tree_proofs import AbsenceProof, PresenceProof
 from .utils import get_domains
 
 
@@ -49,8 +50,11 @@ class BaseTree(MerkleTree):
         return None
 
     def get_proof_idx(self, idx):
-        if 0 <= idx < len(self.leaves):
-            return self.get_chain(idx)
+        """
+        Returns an entry and its presence proof.
+        """
+        if 0 <= idx < len(self.entries):
+            return PresenceProof.from_values(self.entries[idx], self.get_chain(idx))
         return None
 
     def add_hash(self, value):  # Not needed and may be confusing, don't implement
@@ -107,17 +111,14 @@ class SortedTree(BaseTree):
         return None
 
     def get_proof(self, label):
+        """
+        Return a full absence or presence proof.
+        """
         idx = self.get_idx_for_label(label)
         if 0 <= idx < len(self.entries) and self.entries[idx].get_label() == label:
             return self.get_proof_idx(idx)
-        else:
-            return self.get_absence_proof_idx(idx-1, idx)
-
-    def get_absence_proof_idx(self, idx1, idx2):
-        # TODO(PSz): entries should be returned as well
-        proof1 = self.get_proof_idx(idx1)
-        proof2 = self.get_proof_idx(idx2)
-        return (proof1, proof2)
+        # Absence proof
+        return AbsenceProof.from_values(self.get_proof_idx(idx-1), self.get_proof_idx(idx))
 
 
 class CertificateTree(SortedTree):
