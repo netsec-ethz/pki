@@ -21,7 +21,7 @@ from .defines import MsgFields
 @total_ordering
 class TreeEntry(object):
     TYPE = None
-    def pack(self):
+    def pack(self):  # Output is used for building an actual tree
         return {MsgFields.TYPE: self.TYPE}
 
     def get_hash(self):

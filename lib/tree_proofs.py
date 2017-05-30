@@ -23,7 +23,6 @@ class BaseProof(object):
     TYPE = None
     def __init__(self, raw=None):
         self.raw = raw
-        self.extra_entries = []
         if raw is not None:
             self.parse(raw)
 
@@ -169,3 +168,28 @@ class AbsenceProof(BaseProof):
 
     def __str__(self):
         return "Proof1: %s\nProof2: %s" % (self.proof1, self.proof2)
+
+
+class PolicyProof(BaseProof):
+    """
+    Complete proof of an SCP. It consists of either of n>0 presence proofs, or a
+    single absence proof and N>=0 presence proofs. See... TODO(PSz)
+    """
+    TYPE = MsgFields.POLICY_PROOF
+    def __init__(self, raw=None):
+        """
+        """
+        self.proofs = []
+        super().__init__(raw)
+
+    @classmethod
+    def from_values(cls, proofs):
+        inst = cls()
+        inst.proofs = proofs
+        return inst
+
+    def __str__(self):
+        res = ["PolicyProof"]
+        for proof in self.proofs:
+            res.append(str(proof))
+        return "\n".join(res)

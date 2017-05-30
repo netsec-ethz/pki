@@ -90,7 +90,7 @@ DEFAULT_POLICY = {
 
 
 class MsgFields(object):
-    TYPE = "type"
+    TYPE = "SHOULDN'T SEE THAT"
     REV = "rev"
     MSC = "msc"
     SCP = "scp"
@@ -100,5 +100,6 @@ class MsgFields(object):
     POLICY_ROOT = "policy_root"
     CERT_ROOT = "cert_root"
     SUBROOT = "subroot"
-    ABSENCE_PROOF = "absence"
-    PRESENCE_PROOF = "presence"
+    ABSENCE_PROOF = "absence_proof"
+    PRESENCE_PROOF = "presence_proof"
+    POLICY_PROOF = "policy_proof"
