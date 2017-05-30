@@ -36,7 +36,7 @@ class BaseTree(MerkleTree):
         # Build an actual tree
         leaves = []
         for entry in entries:
-            leaves.append(entry.get_data())
+            leaves.append(entry.pack())
         super().__init__(leaves)
         self.build()
 
@@ -77,7 +77,7 @@ class ConsistencyTree(BaseTree):
     """
     def add(self, entry):
         self.entries.append(entry)
-        self.leaves.append(Node(entry.get_data()))
+        self.leaves.append(Node(entry.pack()))
 
 
 class SortedTree(BaseTree):
@@ -95,7 +95,7 @@ class SortedTree(BaseTree):
             self._handle_existing_entry(idx, entry)
         else:
             self.entries.insert(idx, entry)
-            self.leaves.insert(idx, Node(entry.get_data()))
+            self.leaves.insert(idx, Node(entry.pack()))
 
     def _handle_existing_entry(self, idx, entry):
         raise NotImplementedError
@@ -156,7 +156,7 @@ class PolicySubTree(SortedTree):
         logging.info("updating policy entry: %s by %s" % (self.entries[idx], entry))
         # PSz: Check version here?(rather when accepting the entry)
         self.entries[idx].scp = entry.scp
-        self.leaves[idx] = Node(self.entries[idx].get_data())
+        self.leaves[idx] = Node(self.entries[idx].pack())
 
     def __str__(self):
         l = []

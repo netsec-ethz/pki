@@ -21,11 +21,11 @@ from .defines import MsgFields
 @total_ordering
 class TreeEntry(object):
     TYPE = None
-    def get_data(self):
+    def pack(self):
         return {MsgFields.TYPE: self.TYPE}
 
     def get_hash(self):
-        return hash_function(self.get_data()).digest()
+        return hash_function(self.pack()).digest()
 
     def get_label(self):  # Have to be implemented for entries of sorted trees
         raise NotImplementedError
@@ -33,7 +33,7 @@ class TreeEntry(object):
     def __lt__(self, other):
         return self.get_label() < other.get_label()
 
-    def __eq__(self, other):  # FIXME(PSz): That may be misleading, get_data()?
+    def __eq__(self, other):  # FIXME(PSz): That may be misleading, pack()?
         return self.get_label() == other.get_label()
 
 
@@ -44,8 +44,8 @@ class RevocationEntry(TreeEntry):
         self.rev = rev
         super().__init__()
 
-    def get_data(self):
-        res = super().get_data()
+    def pack(self):
+        res = super().pack()
         res[MsgFields.REV] = self.rev.raw
         return dict_to_cbor(res)
 
@@ -56,8 +56,8 @@ class MSCEntry(TreeEntry):
         self.msc = msc
         super().__init__()
 
-    def get_data(self):
-        res = super().get_data()
+    def pack(self):
+        res = super().pack()
         res[MsgFields.MSC] = self.msc.pem
         return dict_to_cbor(res)
 
@@ -73,8 +73,8 @@ class CertificateEntry(TreeEntry):
         self.rev = rev or None
         super().__init__()
 
-    def get_data(self):
-        res = super().get_data()
+    def pack(self):
+        res = super().pack()
         res[MsgFields.MSC] = self.msc.pem
         if self.rev:
             res[MsgFields.REV] = self.rev.raw
@@ -92,8 +92,8 @@ class SCPEntry(TreeEntry):
         self.scp = scp
         super().__init__()
 
-    def get_data(self):
-        res = super().get_data()
+    def pack(self):
+        res = super().pack()
         res[MsgFields.SCP] = self.scp.pem
         return dict_to_cbor(res)
 
@@ -107,8 +107,8 @@ class RootsEntry(TreeEntry):
         self.policy_tree_root = policy_tree_root
         self.cert_tree_root = cert_tree_root
 
-    def get_data(self):
-        res = super().get_data()
+    def pack(self):
+        res = super().pack()
         res[MsgFields.POLICY_ROOT] = self.policy_tree_root
         res[MsgFields.CERT_ROOT] = self.cert_tree_root
         return dict_to_cbor(res)
@@ -127,8 +127,8 @@ class PolicyEntry(TreeEntry):
         self.subtree = subtree
         super().__init__()
 
-    def get_data(self):
-        res = super().get_data()
+    def pack(self):
+        res = super().pack()
         if self.scp:
             res[MsgFields.SCP] = self.scp.pem
         else:
