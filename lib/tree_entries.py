@@ -24,6 +24,9 @@ class TreeEntry(object):
     def pack(self):  # Output is used for building an actual tree
         return {MsgFields.TYPE: self.TYPE}
 
+    def parse(self, raw):
+        raise NotImplementedError
+
     def get_hash(self):
         return hash_function(self.pack()).digest()
 
@@ -33,9 +36,11 @@ class TreeEntry(object):
     def __lt__(self, other):
         return self.get_label() < other.get_label()
 
-    def __eq__(self, other):  # FIXME(PSz): That may be misleading, pack()?
+    def __eq__(self, other):  # Used for sorting only
         return self.get_label() == other.get_label()
 
+    def is_equal(self, other):
+        return self.pack() == other.pack()
 
 # PSz: consider id as get_label() for entries of ConsistencyTree
 class RevocationEntry(TreeEntry):

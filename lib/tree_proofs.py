@@ -32,7 +32,7 @@ class BaseProof(object):
     def pack(self):
         return {MsgFields.TYPE: self.TYPE}
 
-    def validate(self, external_root=None):
+    def validate(self, label, external_root=None):
         raise NotImplementedError
 
     def join(self, higher_proof):
@@ -69,13 +69,13 @@ class PresenceProof(BaseProof):
         """
         return self.chain[0][0]
 
-    def validate(self, entry=None, external_root=None):
+    def validate(self, label, external_root=None):
         if not self.entry or not self.chain:
             raise EEPKIError("Incomplete proof")
+        if label != self.entry.get_label():
+            raise EEPKIError("Labels mismatch"
         if external_root and external_root != self.get_root():
             raise EEPKIError("Roots mismatch")
-        if entry and entry.get_hash() != self.entry.get_hash():
-            raise EEPKIError("Proof is constructed for other entry")
         if self.get_entry_hash() != self.entry.get_hash():
             raise EEPKIError("Hash of the entry doesn't match the proof")
         try:
@@ -100,14 +100,14 @@ class AbsenceProof(BaseProof):
         self.proof2 = None
         super().__init__(raw)
 
-    def validate(self, entry, external_root=None):
+    def validate(self, label, external_root=None):
         if not self.proof1 and not self.proof2:
             raise EEPKIError("Incomplete proof")
         elif not self.proof1 or not self.proof2:  # Handle cases with one proof
-            return self._single_proof(entry, external_root)
+            return self._single_proof(label, external_root)
 
         # Handle the common case (two presence proofs)
-        if not (self.proof1.entry < entry < self.proof2.entry):
+        if not (self.proof1.entry.get_label() < label < self.proof2.entry.get_label()):
             raise EEPKIError("Label not between proof1 and proof2")
         if not self.proof1.validate(external_root=external_root):
             raise EEPKIError("Validation of proof1 failed")
@@ -121,18 +121,18 @@ class AbsenceProof(BaseProof):
             raise EEPKIError("Non-siblings proofs")
         return True
 
-    def _single_proof(self, entry, external_root):
+    def _single_proof(self, label, external_root):
         """
         Single proof validation (corner case).
         """
         if self.proof1:
-            if self.proof1.entry <= entry:
+            if self.proof1.entry.get_label() <= label:
                 raise EEPKIError("Single proof incorrect")
             char = 'L'
             chain = self.proof1.chain
             proof = self.proof1
         else:
-            if self.proof1.entry >= entry:
+            if self.proof1.entry.get_label() >= label:
                 raise EEPKIError("Single proof incorrect")
             char = 'R'
             chain = self.proof1.chain
@@ -147,8 +147,23 @@ class AbsenceProof(BaseProof):
         return True
 
     def _sibling_proofs(self):
-        # TODO(PSz): ensure that proof1 and proof2 are for the siblings entries
-        # Probably, need to add tree size at least
+        if len(self.proof1.chain) != len(self.proof2.chain):
+            raise EEPKIError("Proofs lengths mismatch")
+        if self.proof1.get_root() != self.proof2.get_root():
+            raise EEPKIError("Roots mismatch")
+        int_len = len(self.proof1.chain) - 2  # length without 'SELF' and 'ROOT'
+        # Start from the top, to check number of the identitcal nodes (i.e., where paths
+        # converge)
+        while int_len >= 1:
+            if self.proof1.chain[int_len] != self.proof2.chain[int_len]:
+                break
+            int_len -= 1
+        if int_len == 1:
+            raise EEPKIError("All intermediate nodes are identical")
+        while int_len >= 1:
+            if self.proof1.chain[int_len][1] == self.proof2.chain[int_len][1]:
+                raise EEPKIError("The same direction on divergent paths")
+            int_len -= 1
         return True
 
     def parse(self, raw):
