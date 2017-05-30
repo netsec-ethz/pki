@@ -85,7 +85,7 @@ class PresenceProof(BaseProof):
         return True
 
     def __str__(self):
-        return "Entry: %s, Chain: %s" % (self.entry, self.chain)
+        return "Entry: %s, Chain: %s" % (self.entry.get_label(), self.chain)
 
 
 class AbsenceProof(BaseProof):

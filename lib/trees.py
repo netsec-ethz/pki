@@ -24,7 +24,7 @@ from .tree_entries import (
     RootsEntry,
     SCPEntry,
     )
-from .tree_proofs import AbsenceProof, PresenceProof
+from .tree_proofs import AbsenceProof, PresenceProof, PolicyProof
 from .utils import get_domains
 
 
@@ -143,6 +143,7 @@ class CertificateTree(SortedTree):
             l.append(e.get_label().hex()[:10]+"...")
         return super().__str__() + "  ".join(l)
 
+
 class PolicySubTree(SortedTree):
     """
     Tree that contains all policies for a given domain level (e.g., all policies
@@ -163,6 +164,7 @@ class PolicySubTree(SortedTree):
         for e in self.entries:
             l.append(e.get_label())
         return super().__str__() + "  ".join(l)
+
 
 class PolicyTree(object):
     """
@@ -198,6 +200,17 @@ class PolicyTree(object):
                     entry.subtree = tree
         # Now add/update entry with SCP
         tree.add(scp_entry)
+
+    def get_proof(self, label):
+        res = []
+        tree = self.tld_tree
+        for name in get_domains(label):
+            entry = tree.get_entry(name)
+            res.append(tree.get_proof(name))
+            if not entry or not entry.subtree:
+                break
+            tree = entry.subtree
+        return PolicyProof.from_values(reversed(res))
 
     def get_entry(self, label):
         tree = self.tld_tree
