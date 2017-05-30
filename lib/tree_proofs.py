@@ -15,7 +15,7 @@ from base64 import b64decode, b64encode
 
 from merkle import check_chain, MerkleError
 
-from .defines import MsgFields
+from .defines import EEPKIError, MsgFields
 from .utils import dict_to_cbor
 
 
@@ -71,17 +71,17 @@ class PresenceProof(BaseProof):
 
     def validate(self, entry=None, external_root=None):
         if not self.entry or not self.chain:
-            return False  # Incomplete proof
+            raise EEPKIError("Incomplete proof")
         if external_root and external_root != self.get_root():
-            return False  # Roots mismatch
+            raise EEPKIError("Roots mismatch")
         if entry and entry.get_hash() != self.entry.get_hash():
-            return False  # Proof is constructed for other entry
+            raise EEPKIError("Proof is constructed for other entry")
         if self.get_entry_hash() != self.entry.get_hash():
-            return False  # Hash of the entry doesn't match the proof
+            raise EEPKIError("Hash of the entry doesn't match the proof")
         try:
             check_chain(self.chain)
         except MerkleError:
-            return False  # Chain verification failed
+            raise EEPKIError("Chain verification failed")
         return True
 
     def __str__(self):
@@ -102,23 +102,23 @@ class AbsenceProof(BaseProof):
 
     def validate(self, entry, external_root=None):
         if not self.proof1 and not self.proof2:
-            return False  # Incomplete proof
+            raise EEPKIError("Incomplete proof")
         elif not self.proof1 or not self.proof2:  # Handle cases with one proof
             return self._single_proof(entry, external_root)
 
         # Handle the common case (two presence proofs)
-        if not (self.proof1.entry < entry < self.proof2.entry):  # Entry must be between
-            return False
+        if not (self.proof1.entry < entry < self.proof2.entry):
+            raise EEPKIError("Label not between proof1 and proof2")
         if not self.proof1.validate(external_root=external_root):
-            return False
+            raise EEPKIError("Validation of proof1 failed")
         if not self.proof2.validate(external_root=external_root):
-            return False
-        if self.proof1.get_root() != self.proof2.get_root():  # Check if the tree is the
-            return False
+            raise EEPKIError("Validation of proof2 failed")
+        if self.proof1.get_root() != self.proof2.get_root():
+            raise EEPKIError("Proofs have different roots")
         if external_root and external_root != self.proof1.get_root():
-            return False
+            raise EEPKIError("External root mismatch")
         if not self._sibling_proofs():
-            return False
+            raise EEPKIError("Non-siblings proofs")
         return True
 
     def _single_proof(self, entry, external_root):
@@ -127,13 +127,13 @@ class AbsenceProof(BaseProof):
         """
         if self.proof1:
             if self.proof1.entry <= entry:
-                return False
+                raise EEPKIError("Single proof incorrect")
             char = 'L'
             chain = self.proof1.chain
             proof = self.proof1
         else:
             if self.proof1.entry >= entry:
-                return False
+                raise EEPKIError("Single proof incorrect")
             char = 'R'
             chain = self.proof1.chain
             proof = self.proof2
@@ -141,9 +141,9 @@ class AbsenceProof(BaseProof):
         # This has to be the most left or right root
         for _, tmp in chain[1:-1]:  # Don't check 'SELF' and 'ROOT'
             if tmp != char:
-                return False
+                raise EEPKIError("Non-boundary proof")
         if not proof.validate(external_root=external_root):
-            return False
+            raise EEPKIError("Validation of proof failed")
         return True
 
     def _sibling_proofs(self):

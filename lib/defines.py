@@ -19,6 +19,11 @@ CERT_SEP = b'-----BEGIN CERTIFICATE-----\n'
 DAY = 3600*24
 
 
+# TODO(PSz): introduce more granular classes
+class EEPKIError(Exception):
+    pass
+
+
 class SecLevel(object):
     LOW = 0
     MEDIUM = 1
