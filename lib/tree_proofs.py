@@ -73,7 +73,7 @@ class PresenceProof(BaseProof):
         if not self.entry or not self.chain:
             raise EEPKIError("Incomplete proof")
         if label != self.entry.get_label():
-            raise EEPKIError("Labels mismatch"
+            raise EEPKIError("Labels mismatch")
         if external_root and external_root != self.get_root():
             raise EEPKIError("Roots mismatch")
         if self.get_entry_hash() != self.entry.get_hash():
