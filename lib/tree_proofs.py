@@ -197,6 +197,39 @@ class PolicyProof(BaseProof):
         inst.proofs = proofs
         return inst
 
+    def validate(self, label, external_root=None, absence=False):
+        if not self.proofs:
+            raise EEPKIError("No proof")
+        # Check whether self.proofs has correct content
+        if absence and not isinstance(self.proofs[0], AbsenceProof):
+            raise EEPKIError("First proof's type incorrect")
+        elif not absence and not isinstance(self.proofs[0], PresenceProof)
+            raise EEPKIError("First proof's type incorrect")
+        for proof in self.proofs[1:]:
+            if not isinstance(proof, PresenceProof):
+                raise EEPKIError("Non-first proof incorrect")
+        # Validate proofs top-down
+        ext_root = external_root
+        domains = get_domains(domain_name)
+        for idx, proof in enumerate(reversed(self.proofs)):
+            proof.validate(domains[idx], ext_root)
+            if isinstance(proof, PresenceProof) and proof.entry.subtree:
+                ext_root = proof.entry.subtree.get_root()
+            else:
+                ext_root = None
+        # Final checks, first presence proof
+        if not absence:
+            if len(domains) != len(self.proofs):
+                raise EEPKIError("Incorrect number of proofs")
+            return True
+        # Absence proof, first case where one domain doesn't have an SCP
+        if isinstance(self.proofs[0], AbsenceProof):
+            return True
+        # An upper-domain doesn't have a subtree
+        if len(domains) > len(self.proofs) and not self.proofs[0].entry.subtree:
+            return True
+        raise EEPKIError("Incorrect set of proofs")
+
     def __str__(self):
         res = ["PolicyProof"]
         for proof in self.proofs:
