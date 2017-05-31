@@ -35,12 +35,6 @@ class BaseProof(object):
     def validate(self, label, external_root=None):
         raise NotImplementedError
 
-    def join(self, higher_proof):
-        """
-        Extend (if possible) the self proof by the higher_proof.
-        """
-        raise NotImplementedError
-
 
 class PresenceProof(BaseProof):
     TYPE = MsgFields.PRESENCE_PROOF
@@ -207,4 +201,31 @@ class PolicyProof(BaseProof):
         res = ["PolicyProof"]
         for proof in self.proofs:
             res.append(str(proof))
+        return "\n".join(res)
+
+
+class EEPKIProof(BaseProof):
+    """
+    Complete proof of MSC and SCP. For SPC's absence proofs an MSC proof can be None.
+    """
+    TYPE = MsgFields.EEPKI_PROOF
+    def __init__(self, raw=None):
+        self.cons_proof = None  # ConsistencyTree's proof
+        self.policy_proof = None  # PolicyTree's proof
+        self.cert_proof = None  # CertificateTree's proof
+        super().__init__(raw)
+
+    @classmethod
+    def from_values(cls, cons_proof, policy_proof, cert_proof=None):
+        inst = cls()
+        inst.cons_proof = cons_proof
+        inst.policy_proof = policy_proof
+        inst.cert_proof = cert_proof
+        return inst
+
+    def __str__(self):
+        res = ["EEPKIProof:"]
+        res.append(str(self.cons_proof))
+        res.append(str(self.policy_proof))
+        res.append(str(self.cert_proof))
         return "\n".join(res)

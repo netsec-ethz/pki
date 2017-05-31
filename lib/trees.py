@@ -252,4 +252,3 @@ class PolicyTree(object):
         res = []
         get_tree_str(self.tld_tree, res, 1)
         return "Policy Tree:\n" + "\n".join(res)
-

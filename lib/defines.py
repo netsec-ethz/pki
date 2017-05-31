@@ -108,3 +108,4 @@ class MsgFields(object):
     ABSENCE_PROOF = "absence_proof"
     PRESENCE_PROOF = "presence_proof"
     POLICY_PROOF = "policy_proof"
+    EEPKI_PROOF = "eepki_proof"
