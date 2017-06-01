@@ -299,6 +299,17 @@ class EEPKIProof(BaseProof):
         if msc_label:
             self.cert_proof.validate(msc_label, self.cons_proof.entry.cert_tree_root)
 
+    def get_cert_entry(self):
+        if self.cert_proof:
+            return self.cert_proof.entry
+        return None
+
+    def get_scp_entries(self):
+        scps = []
+        for proof in self.policy_proof:
+            scps.append(proof.entry)
+        return scps
+
     def __str__(self):
         res = ["EEPKIProof:"]
         res.append(str(self.cons_proof))
