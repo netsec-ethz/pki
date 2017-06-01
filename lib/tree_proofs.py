@@ -274,13 +274,14 @@ class EEPKIProof(BaseProof):
 
     def validate(self, scp_label, root, msc_label=None,
                  scp_absence=False, msc_absence=False):
-        # TODO(PSz): assert entry types here?
+        # TODO(PSz): should consider msc proofs only?
         if not self.cons_proof or not self.policy_proof:
             raise EEPKIError("No SCP/consistency proof")
         super().validate(scp_label, root)
         if (not isinstance(self.cons_proof, PresenceProof) or
             not isinstance(self.policy_proof, PolicyProof)):
             raise EEPKIError("Wrong type of SCP/consistency proof")
+        # Few checks if msc is to be validated
         if msc_label:
             if not self.cert_proof:
                 raise EEPKIError("No MSC proof")
@@ -288,6 +289,15 @@ class EEPKIProof(BaseProof):
                 raise EEPKIError("MSC proof is not AbsenceProof")
             if not scp_absence and not isinstance(self.cert_proof, PresenceProof):
                 raise EEPKIError("MSC proof is not PresenceProof")
+        # Check entry of consistency proof:
+        if not isinstance(self.cons_proof.entry, RootsEntry):
+            raise EEPKIError("Consistency proof not for RootsEntry")
+        # Start the actual validation by checking consistency proof
+        self.cons_proof.validate(None, root)
+        # Now check policy proof
+        self.policy_proof.validate(scp_label, self.cons_proof.entry.policy_tree_root)
+        if msc_label:
+            self.cert_proof.validate(msc_label, self.cons_proof.entry.cert_tree_root)
 
     def __str__(self):
         res = ["EEPKIProof:"]
