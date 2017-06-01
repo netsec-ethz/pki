@@ -32,8 +32,12 @@ class BaseProof(object):
     def pack(self):
         return {MsgFields.TYPE: self.TYPE}
 
-    def validate(self, label, external_root=None):
+    def get_root(self):
         raise NotImplementedError
+
+    def validate(self, label, root):
+        if root != self.get_root():
+            raise EEPKIError("External root mismatch")
 
 
 class PresenceProof(BaseProof):
@@ -63,13 +67,12 @@ class PresenceProof(BaseProof):
         """
         return self.chain[0][0]
 
-    def validate(self, label, external_root=None):
+    def validate(self, label, root):
+        super().validate(label, root)
         if not self.entry or not self.chain:
             raise EEPKIError("Incomplete proof")
-        if label != self.entry.get_label():
+        if label and label != self.entry.get_label():
             raise EEPKIError("Labels mismatch")
-        if external_root and external_root != self.get_root():
-            raise EEPKIError("Roots mismatch")
         if self.get_entry_hash() != self.entry.get_hash():
             raise EEPKIError("Hash of the entry doesn't match the proof")
         try:
@@ -94,28 +97,36 @@ class AbsenceProof(BaseProof):
         self.proof2 = None
         super().__init__(raw)
 
-    def validate(self, label, external_root=None):
+    def get_root(self):
+        if self.proof1 and self.proof2:
+            if self.proof1.get_root() != self.proof2.get_root():
+                raise EEPKIError("Proof1 and proof2 have different roots")
+            return self.proof1.get_root()
+        if self.proof1:  # single proof1
+            return self.proof1.get_root()
+        elif self.proof2:
+            return self.proof2.get_root()  # single proof2
+        raise EEPKIError("Cannot get root of None proofs")
+
+    def validate(self, label, root):
         if not self.proof1 and not self.proof2:
             raise EEPKIError("Incomplete proof")
-        elif not self.proof1 or not self.proof2:  # Handle cases with one proof
-            return self._single_proof(label, external_root)
+        super().validate(label, root)
+        if not self.proof1 or not self.proof2:  # Handle cases with one proof
+            return self._single_proof(label, root)
 
         # Handle the common case (two presence proofs)
         if not (self.proof1.entry.get_label() < label < self.proof2.entry.get_label()):
             raise EEPKIError("Label not between proof1 and proof2")
-        if not self.proof1.validate(external_root=external_root):
+        if not self.proof1.validate(None, root):
             raise EEPKIError("Validation of proof1 failed")
-        if not self.proof2.validate(external_root=external_root):
+        if not self.proof2.validate(None, root):
             raise EEPKIError("Validation of proof2 failed")
-        if self.proof1.get_root() != self.proof2.get_root():
-            raise EEPKIError("Proofs have different roots")
-        if external_root and external_root != self.proof1.get_root():
-            raise EEPKIError("External root mismatch")
         if not self._sibling_proofs():
             raise EEPKIError("Non-siblings proofs")
         return True
 
-    def _single_proof(self, label, external_root):
+    def _single_proof(self, label, root):
         """
         Single proof validation (corner case).
         """
@@ -136,15 +147,13 @@ class AbsenceProof(BaseProof):
         for _, tmp in chain[1:-1]:  # Don't check 'SELF' and 'ROOT'
             if tmp != char:
                 raise EEPKIError("Non-boundary proof")
-        if not proof.validate(external_root=external_root):
+        if not proof.validate(None, root):
             raise EEPKIError("Validation of proof failed")
         return True
 
     def _sibling_proofs(self):
         if len(self.proof1.chain) != len(self.proof2.chain):
             raise EEPKIError("Proofs lengths mismatch")
-        if self.proof1.get_root() != self.proof2.get_root():
-            raise EEPKIError("Roots mismatch")
         int_len = len(self.proof1.chain) - 2  # length without 'SELF' and 'ROOT'
         # Start from the top, to check number of the identitcal nodes (i.e., where paths
         # converge)
@@ -197,26 +206,30 @@ class PolicyProof(BaseProof):
         inst.proofs = proofs
         return inst
 
-    def validate(self, label, external_root=None, absence=False):
+    def get_root(self):
+        return self.proofs[-1].get_root()
+
+    def validate(self, label, root, absence=False):
         if not self.proofs:
             raise EEPKIError("No proof")
+        super().validate(label, root)
         # Check whether self.proofs has correct content
         if absence and not isinstance(self.proofs[0], AbsenceProof):
             raise EEPKIError("First proof's type incorrect")
-        elif not absence and not isinstance(self.proofs[0], PresenceProof)
+        elif not absence and not isinstance(self.proofs[0], PresenceProof):
             raise EEPKIError("First proof's type incorrect")
         for proof in self.proofs[1:]:
             if not isinstance(proof, PresenceProof):
                 raise EEPKIError("Non-first proof incorrect")
         # Validate proofs top-down
-        ext_root = external_root
+        tmp_root = root
         domains = get_domains(domain_name)
         for idx, proof in enumerate(reversed(self.proofs)):
-            proof.validate(domains[idx], ext_root)
+            proof.validate(domains[idx], tmp_root)
             if isinstance(proof, PresenceProof) and proof.entry.subtree:
-                ext_root = proof.entry.subtree.get_root()
+                tmp_root = proof.entry.subtree.get_root()
             else:
-                ext_root = None
+                tmp_root = None
         # Final checks, first presence proof
         if not absence:
             if len(domains) != len(self.proofs):
@@ -255,6 +268,26 @@ class EEPKIProof(BaseProof):
         inst.policy_proof = policy_proof
         inst.cert_proof = cert_proof
         return inst
+
+    def get_root(self):
+        return self.cons_proof.get_root()
+
+    def validate(self, scp_label, root, msc_label=None,
+                 scp_absence=False, msc_absence=False):
+        # TODO(PSz): assert entry types here?
+        if not self.cons_proof or not self.policy_proof:
+            raise EEPKIError("No SCP/consistency proof")
+        super().validate(scp_label, root)
+        if (not isinstance(self.cons_proof, PresenceProof) or
+            not isinstance(self.policy_proof, PolicyProof)):
+            raise EEPKIError("Wrong type of SCP/consistency proof")
+        if msc_label:
+            if not self.cert_proof:
+                raise EEPKIError("No MSC proof")
+            if scp_absence and not isinstance(self.cert_proof, AbsenceProof):
+                raise EEPKIError("MSC proof is not AbsenceProof")
+            if not scp_absence and not isinstance(self.cert_proof, PresenceProof):
+                raise EEPKIError("MSC proof is not PresenceProof")
 
     def __str__(self):
         res = ["EEPKIProof:"]
