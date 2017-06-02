@@ -32,6 +32,7 @@ class Log(object):
         self.cons_tree.update()
 
     def add_scp(self, scp):
+        # check version etc...
         pass
 
     def add_msc(self, scp):
@@ -52,4 +53,3 @@ class Log(object):
         last_idx = len(self.cons_tree.entries) - 1
         cons_proof = self.cons_tree.get_proof_idx(last_idx)
         return EEPKIProof.from_values(cons_proof, policy_proof, cert_proof)
-
