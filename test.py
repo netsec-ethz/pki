@@ -26,6 +26,7 @@ from pki.lib.verifier import verify
 # SCION
 from lib.crypto.trc import TRC
 
+
 def verifier(msc, scp, trc, domain_name, sec_lvl=SecLevel.MEDIUM):
     # take trusted_certs as union of TRCs and policy
     trusted_certs = []

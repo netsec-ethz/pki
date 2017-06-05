@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pki.lib.trees import  CertificateTree, ConsistencyTree, PolicyTree
-from pki.lib.tree_entries import RevocationEntry, MSCEntry, SCPEntry, 
+from pki.lib.tree_entries import RevocationEntry, MSCEntry, SCPEntry,
 from pki.lib.tree_proofs import EEPKIProof
 
 
@@ -32,14 +32,23 @@ class Log(object):
         self.cons_tree.update()
 
     def add_scp(self, scp):
-        # check version etc...
-        pass
+        se = SCPEntry(scp)
+        self.ConsistencyTree.add(se)
+        pe = PolicyEntry(scp.domain_name, scp)
+        self.policy_tree(pe)
 
-    def add_msc(self, scp):
-        pass
+    def add_msc(self, msc):
+        me = MSCEntry(msc)
+        self.ConsistencyTree.add(me)
+        ce = CertificateEntry(msc)
+        self.cert_tree.update(me)
 
-    def add_rev(self, scp):
-        pass
+    def add_rev(self, rev):
+        re = MSCEntry(rev)
+        self.ConsistencyTree.add(re)
+        msc = self.cons_tree.get_msc(rev.label)
+        ce = CertificateEntry(msc, rev)
+        self.cert_tree.update(me)
 
     def get_root(self):
         return self.cons_tree.get_root()
