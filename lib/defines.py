@@ -95,7 +95,7 @@ DEFAULT_POLICY = {
 
 
 class MsgFields(object):
-    TYPE = "SHOULDN'T SEE THAT"
+    TYPE = "type"
     REV = "rev"
     MSC = "msc"
     SCP = "scp"

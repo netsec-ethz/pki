@@ -131,6 +131,10 @@ class CertificateTree(SortedTree):
         # PSz: Consider a list of accepted requests
         super().__init__(entries)  # Sorted tree
 
+    def add(self, entry):
+        assert isinstance(entry, CertificateEntry)
+        super().add(entry)
+
     def _handle_existing_entry(self, idx, entry):
         logging.error("Entry with the label exists: %s" % entry.get_label())
         # TODO(PSz): here should add revocation?
@@ -151,10 +155,19 @@ class PolicySubTree(SortedTree):
     def __init__(self, entries=None):
         super().__init__(entries)  # Sorted tree
 
+    def add(self, entry):
+        assert isinstance(entry, PolicyEntry)
+        super().add(entry)
+
     def _handle_existing_entry(self, idx, entry):
         logging.info("updating policy entry: %s by %s" % (self.entries[idx], entry))
+        print("updating policy entry: %s by %s" % (self.entries[idx], entry))
+        print("updating policy entry: %s by %s" % (self.entries[idx].get_label(),
+            entry.get_label()))
         # PSz: Check version here?(rather when accepting the entry)
+        print(self.entries[idx].pack())
         self.entries[idx].scp = entry.scp
+        print(self.entries[idx].pack())
         self.leaves[idx] = Node(self.entries[idx].pack())
 
     def __str__(self):

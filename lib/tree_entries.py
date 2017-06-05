@@ -139,7 +139,7 @@ class PolicyEntry(TreeEntry):
         else:
             res[MsgFields.SCP] = None
         if self.subtree:
-            res[MsgFields.SUBROOT] = self.subtree.root
+            res[MsgFields.SUBROOT] = self.subtree.get_root()
         else:
             res[MsgFields.SUBROOT] = None
         return dict_to_cbor(res)

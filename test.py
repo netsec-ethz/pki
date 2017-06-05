@@ -116,7 +116,9 @@ for e in all_:
         log.add_msc(e)
     elif isinstance(e, SCP):
         log.add_scp(e)
+    log.build()  # test building for each node
 log.build()
+
 
 # print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
 # for c in certtree.entries :
