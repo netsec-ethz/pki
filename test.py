@@ -119,6 +119,35 @@ for e in all_:
     log.build()  # test building for each node
 log.build()
 
+# Prepare validation vectors
+vectors = []
+root = log.get_root()
+for scp, msc in zip(scps, mscs):
+    scp_label = scp.get_label()
+    msc_label = msc.get_label()
+    v.append((True, scp_label, root, msc_label, False, False))
+    # w/o MSC label
+    v.append((True, scp_label, root, None, False, False))
+    v.append((False, scp_label, root, None, True, True))
+    # MSC absence
+    v.append((True, scp_label, root, msc_label[:-1], False, True))
+    v.append((True, scp_label, root, msc_label+b"0", False, True))
+    v.append((False, scp_label, root, msc_label[:-1], False, False))
+    v.append((False, scp_label, root, msc_label+b"0", False, False))
+    # SCP absence
+    v.append((False, scp_label[:-1], root, msc_label[:-1], False, True))
+    v.append((False, scp_label+b"0", root, msc_label+b"0", False, True))
+random.shuffle(vectors)
+for v in vectors:
+    proof = log.get_proof(v[1], v[3])
+    try:
+        proof.validate(*v[1:])
+        res = True
+    except EEPKIError:
+        res = False
+    if res != v[0]:
+        print("Validation failed: ", v)
+
 
 # print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
 # for c in certtree.entries :
