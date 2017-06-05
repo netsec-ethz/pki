@@ -16,7 +16,8 @@ from base64 import b64decode, b64encode
 from merkle import check_chain, MerkleError
 
 from .defines import EEPKIError, MsgFields
-from .utils import dict_to_cbor
+from .tree_entries import RootsEntry
+from .utils import dict_to_cbor, get_domains
 
 
 class BaseProof(object):
@@ -74,6 +75,7 @@ class PresenceProof(BaseProof):
         if label and label != self.entry.get_label():
             raise EEPKIError("Labels mismatch")
         if self.get_entry_hash() != self.entry.get_hash():
+            print("%s\n%s\n%s\n%s" % (self.entry, self.chain, self.get_entry_hash(),self.entry.get_hash()))
             raise EEPKIError("Hash of the entry doesn't match the proof")
         try:
             check_chain(self.chain)
@@ -223,7 +225,7 @@ class PolicyProof(BaseProof):
                 raise EEPKIError("Non-first proof incorrect")
         # Validate proofs top-down
         tmp_root = root
-        domains = get_domains(domain_name)
+        domains = get_domains(label)
         for idx, proof in enumerate(reversed(self.proofs)):
             proof.validate(domains[idx], tmp_root)
             if isinstance(proof, PresenceProof) and proof.entry.subtree:

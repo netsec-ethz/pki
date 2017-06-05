@@ -221,7 +221,7 @@ class PolicyTree(object):
             if not entry or not entry.subtree:
                 break
             tree = entry.subtree
-        return PolicyProof.from_values(reversed(res))
+        return PolicyProof.from_values(list(reversed(res)))
 
     def get_entry(self, label):
         tree = self.tld_tree

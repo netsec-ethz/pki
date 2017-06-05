@@ -62,7 +62,7 @@ class Log(object):
     def get_root(self):
         return self.cons_tree.get_root()
 
-    def get_proof(scp_label, msc_label=None):
+    def get_proof(self, scp_label, msc_label=None):
         policy_proof = self.policy_tree.get_proof(scp_label)
         cert_proof = None
         if msc_label:

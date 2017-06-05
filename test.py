@@ -18,7 +18,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 # from cryptography.x509 import load_pem_x509_certificate
 
-from pki.lib.defines import SecLevel, ValidationResult
+from pki.lib.defines import EEPKIError, SecLevel, ValidationResult
 from pki.lib.cert import MSC, SCP
 from pki.log.log import Log
 from pki.lib.verifier import verify
@@ -123,30 +123,32 @@ log.build()
 vectors = []
 root = log.get_root()
 for scp, msc in zip(scps, mscs):
-    scp_label = scp.get_label()
-    msc_label = msc.get_label()
-    v.append((True, scp_label, root, msc_label, False, False))
+    scp_label = SCPEntry(scp).get_label()
+    msc_label = CertificateEntry(msc).get_label()
+    vectors.append((True, scp_label, root, msc_label, False, False))
     # w/o MSC label
-    v.append((True, scp_label, root, None, False, False))
-    v.append((False, scp_label, root, None, True, True))
-    # MSC absence
-    v.append((True, scp_label, root, msc_label[:-1], False, True))
-    v.append((True, scp_label, root, msc_label+b"0", False, True))
-    v.append((False, scp_label, root, msc_label[:-1], False, False))
-    v.append((False, scp_label, root, msc_label+b"0", False, False))
-    # SCP absence
-    v.append((False, scp_label[:-1], root, msc_label[:-1], False, True))
-    v.append((False, scp_label+b"0", root, msc_label+b"0", False, True))
+    # vectors.append((True, scp_label, root, None, False, False))
+    # vectors.append((False, scp_label, root, None, True, True))
+    # # MSC absence
+    # vectors.append((True, scp_label, root, msc_label[:-1], False, True))
+    # vectors.append((True, scp_label, root, msc_label+b"0", False, True))
+    # vectors.append((False, scp_label, root, msc_label[:-1], False, False))
+    # vectors.append((False, scp_label, root, msc_label+b"0", False, False))
+    # # SCP absence
+    # vectors.append((False, scp_label[:-1], root, msc_label[:-1], False, True))
+    # vectors.append((False, scp_label+"0", root, msc_label+b"0", False, True))
 random.shuffle(vectors)
-for v in vectors:
+for v in vectors[:1]:
     proof = log.get_proof(v[1], v[3])
-    try:
-        proof.validate(*v[1:])
-        res = True
-    except EEPKIError:
-        res = False
-    if res != v[0]:
-        print("Validation failed: ", v)
+    proof.validate(*v[1:])
+    # try:
+    #     proof.validate(*v[1:])
+    #     res = True
+    #     print("Validation OK: ", v)
+    # except EEPKIError:
+    #     res = False
+    #     print("Validation failed: ", v)
+
 
 
 # print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
