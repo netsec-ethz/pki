@@ -26,39 +26,22 @@ from pki.lib.verifier import verify
 # SCION
 from lib.crypto.trc import TRC
 
-
-if __name__ == "__main__":
-    # PYTHONPATH=..:../scion ./test.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc 
-    if len(sys.argv) != 4:
-        print("%s <MSC> <SCP> <TRC>" % sys.argv[0])
-        sys.exit()
-    with open(sys.argv[1], "rb") as f:
-        pem = f.read()
-    msc = MSC(pem)
-    print(msc)
+def verifier(msc, scp, trc, domain_name, sec_lvl=SecLevel.MEDIUM):
     # take trusted_certs as union of TRCs and policy
     trusted_certs = []
     for chain in msc.chains:
         trusted_certs.append(certs_to_pem([chain[-1]]))  # take the last one (CA)
     print(msc.verify_chains(trusted_certs))
 
-    print()
-    with open(sys.argv[2], "rb") as f:
-        pem = f.read()
-    scp = SCP(pem)
     # Update trusted certs
     for chain in scp.chains:
         pem = certs_to_pem([chain[-1]])
         if pem not in trusted_certs:
             trusted_certs.append(pem)  # take the last one (CA)
-    print(scp)
     print(scp.verify_chains(trusted_certs))
 
-    with open(sys.argv[3], "r") as f:
-        trc = TRC.from_raw(f.read())
-
     # The final verification step
-    res = verify("a.com", msc, [scp], None, trc, SecLevel.MEDIUM)
+    res = verify(domain_name, msc, [scp], None, trc, sec_lvl)
     if res == ValidationResult.HARDFAIL:
         print("HARDFAIL")
     elif res == ValidationResult.SOFTFAIL:
@@ -67,6 +50,21 @@ if __name__ == "__main__":
         print("ACCEPT")
     else:
         print("Unknown res: %s" % res)
+
+
+if __name__ == "__main__":
+    # PYTHONPATH=..:../scion ./test.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc
+    if len(sys.argv) != 4:
+        print("%s <MSC> <SCP> <TRC>" % sys.argv[0])
+        sys.exit()
+    with open(sys.argv[1], "rb") as f:
+        msc = MSC(f.read())
+    with open(sys.argv[2], "rb") as f:
+        scp = SCP(f.read())
+    with open(sys.argv[3], "r") as f:
+        trc = TRC.from_raw(f.read())
+
+    verifier(msc, scp, trc, "a.com")
 
 
 # Test Trees

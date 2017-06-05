@@ -18,7 +18,7 @@ from pki.lib.tree_proofs import EEPKIProof
 
 class Log(object):
     def __init__(self):
-        self.cons_tree = CertificateTree()
+        self.cons_tree = ConsistencyTree()
         self.policy_tree = PolicyTree()
         self.cert_tree = CertificateTree()
 
