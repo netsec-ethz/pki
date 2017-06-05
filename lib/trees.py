@@ -35,7 +35,7 @@ class BaseTree(MerkleTree):
             self.entries = entries
         # Build an actual tree
         leaves = []
-        for entry in entries:
+        for entry in self.entries:
             leaves.append(entry.pack())
         super().__init__(leaves)
         self.build()
@@ -131,11 +131,9 @@ class CertificateTree(SortedTree):
         # PSz: Consider a list of accepted requests
         super().__init__(entries)  # Sorted tree
 
-    def add_revocation(self, rev):
-        raise NotImplementedError
-
     def _handle_existing_entry(self, idx, entry):
         logging.error("Entry with the label exists: %s" % entry.get_label())
+        # TODO(PSz): here should add revocation?
 
     def __str__(self):
         l = []

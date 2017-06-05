@@ -19,9 +19,10 @@ from cryptography.hazmat.primitives import hashes, serialization
 # from cryptography.x509 import load_pem_x509_certificate
 
 from pki.lib.defines import SecLevel, ValidationResult
-from pki.lib.x509 import certs_to_pem, pem_to_certs
 from pki.lib.cert import MSC, SCP
+from pki.log.log import Log
 from pki.lib.verifier import verify
+from pki.lib.x509 import certs_to_pem, pem_to_certs
 
 # SCION
 from lib.crypto.trc import TRC
@@ -95,48 +96,91 @@ def random_domain_names(level=3, per_level=2, length=2):
 
 scps = []
 mscs = []
-certs = []
-policies = []
 domain_names = random_domain_names(level=5)
 for i in domain_names:
     tmp = copy.copy(scp)
     tmp.pem = b"SCPpem: %s" % bytes(i, "utf-8")
     tmp.domain_name = i
-    scps.append(SCPEntry(tmp))
-    policies.append(PolicyEntry(tmp.domain_name, tmp))
+    scps.append(tmp)
     #
     tmp = copy.copy(msc)
     tmp.pem = b"MSCpem: %s" % bytes(i, "utf-8")
     tmp.domain_name = i
-    mscs.append(MSCEntry(tmp))
-    certs.append(CertificateEntry(tmp))
+    mscs.append(tmp)
 
-random.shuffle(certs)
-chrontree = ConsistencyTree(scps+mscs)
-# print(chrontree)
-certtree = CertificateTree(certs)
-print(certtree)
-label = certs[0].get_label()
-print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
-for c in certtree.entries :
-    l = c.get_label()
-    p = certtree.get_proof(l)
-    print("Presence proof", p)
-    l += b"123"
-    p = certtree.get_proof(l)
-    print("Absence proof1", p)
-    l = l[:5]
-    p = certtree.get_proof(l)
-    print("Absence proof2", p)
-    print()
-print()
-polsub = PolicySubTree(policies)
-print(polsub)
-print(polsub.get_entry(domain_names[0])==policies[0])
-print()
-poltree = PolicyTree(policies)
-print(poltree)
-print()
-for dn in domain_names[:5]:
-    print(dn, poltree.get_proof(dn))
-    print("123"+dn, poltree.get_proof("123"+dn))
+log = Log()
+all_ = scps + mscs
+random.shuffle(all_)
+for e in all_:
+    if isinstance(e, MSC):
+        log.add_msc(e)
+    elif isinstance(e, SCP):
+        log.add_scp(e)
+log.build()
+
+# print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
+# for c in certtree.entries :
+#     l = c.get_label()
+#     p = certtree.get_proof(l)
+#     print("Presence proof", p)
+#     l += b"123"
+#     p = certtree.get_proof(l)
+#     print("Absence proof1", p)
+#     l = l[:5]
+#     p = certtree.get_proof(l)
+#     print("Absence proof2", p)
+#     print()
+# print()
+# print(poltree)
+# print()
+# for dn in domain_names[:5]:
+#     print(dn, poltree.get_proof(dn))
+#     print("123"+dn, poltree.get_proof("123"+dn))
+
+# scps = []
+# mscs = []
+# certs = []
+# policies = []
+# domain_names = random_domain_names(level=5)
+# for i in domain_names:
+#     tmp = copy.copy(scp)
+#     tmp.pem = b"SCPpem: %s" % bytes(i, "utf-8")
+#     tmp.domain_name = i
+#     scps.append(SCPEntry(tmp))
+#     policies.append(PolicyEntry(tmp.domain_name, tmp))
+#     #
+#     tmp = copy.copy(msc)
+#     tmp.pem = b"MSCpem: %s" % bytes(i, "utf-8")
+#     tmp.domain_name = i
+#     mscs.append(MSCEntry(tmp))
+#     certs.append(CertificateEntry(tmp))
+#
+# random.shuffle(certs)
+# chrontree = ConsistencyTree(scps+mscs)
+# # print(chrontree)
+# certtree = CertificateTree(certs)
+# print(certtree)
+# label = certs[0].get_label()
+# print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
+# for c in certtree.entries :
+#     l = c.get_label()
+#     p = certtree.get_proof(l)
+#     print("Presence proof", p)
+#     l += b"123"
+#     p = certtree.get_proof(l)
+#     print("Absence proof1", p)
+#     l = l[:5]
+#     p = certtree.get_proof(l)
+#     print("Absence proof2", p)
+#     print()
+# print()
+# polsub = PolicySubTree(policies)
+# print(polsub)
+# print(polsub.get_entry(domain_names[0])==policies[0])
+# print()
+# poltree = PolicyTree(policies)
+# print(poltree)
+# print()
+# for dn in domain_names[:5]:
+#     print(dn, poltree.get_proof(dn))
+#     print("123"+dn, poltree.get_proof("123"+dn))

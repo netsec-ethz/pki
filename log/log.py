@@ -11,8 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
+
 from pki.lib.trees import  CertificateTree, ConsistencyTree, PolicyTree
-from pki.lib.tree_entries import RevocationEntry, MSCEntry, SCPEntry,
+from pki.lib.tree_entries import (
+    CertificateEntry,
+    MSCEntry,
+    RevocationEntry,
+    RootsEntry,
+    SCPEntry,
+    PolicyEntry,
+    )
 from pki.lib.tree_proofs import EEPKIProof
 
 
@@ -21,34 +30,34 @@ class Log(object):
         self.cons_tree = ConsistencyTree()
         self.policy_tree = PolicyTree()
         self.cert_tree = CertificateTree()
+        self.build()
 
-        self.update()
-
-    def update(self):
-        self.policy_tree.update()
-        self.cert_tree.update()
-        re = RootsEntry(self.policy_tree.get_root(), self.cons_tree.update())
+    def build(self):
+        self.policy_tree.build()
+        self.cert_tree.build()
+        re = RootsEntry(self.policy_tree.get_root(), self.cons_tree.build())
         self.cons_tree.add(re)
-        self.cons_tree.update()
+        self.cons_tree.build()
 
     def add_scp(self, scp):
         se = SCPEntry(scp)
-        self.ConsistencyTree.add(se)
+        self.cons_tree.add(se)
         pe = PolicyEntry(scp.domain_name, scp)
-        self.policy_tree(pe)
+        self.policy_tree.add(pe)
 
     def add_msc(self, msc):
         me = MSCEntry(msc)
-        self.ConsistencyTree.add(me)
+        self.cons_tree.add(me)
         ce = CertificateEntry(msc)
-        self.cert_tree.update(me)
+        self.cert_tree.add(ce)
 
     def add_rev(self, rev):
-        re = MSCEntry(rev)
-        self.ConsistencyTree.add(re)
-        msc = self.cons_tree.get_msc(rev.label)
-        ce = CertificateEntry(msc, rev)
-        self.cert_tree.update(me)
+        re = RevocationEntry(rev)
+        self.cons_tree.add(re)
+        ce = self.cert_tree.get_entry(rev.label)
+        if not ce.rev:
+            logging.warning("Adding revocation for %s" % rev.label)
+            ce.rev = rev
 
     def get_root(self):
         return self.cons_tree.get_root()
