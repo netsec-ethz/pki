@@ -17,4 +17,4 @@ References:
 - The PoliCert paper:
     - http://www.netsec.ethz.ch/publications/papers/ccsfp512-szalachowskiA.pdf
 - The SCION book:
-    - TBA
+    - http://scion-architecture.net/pdf/SCION-book.pdf
