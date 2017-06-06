@@ -119,6 +119,7 @@ for e in all_:
     log.build()  # test building for each node
 log.build()
 
+
 # Prepare validation vectors
 vectors = []
 root = log.get_root()
@@ -138,16 +139,13 @@ for scp, msc in zip(scps, mscs):
     # vectors.append((False, scp_label[:-1], root, msc_label[:-1], False, True))
     # vectors.append((False, scp_label+"0", root, msc_label+b"0", False, True))
 random.shuffle(vectors)
-for v in vectors[:1]:
+for v in vectors:
     proof = log.get_proof(v[1], v[3])
-    proof.validate(*v[1:])
-    # try:
-    #     proof.validate(*v[1:])
-    #     res = True
-    #     print("Validation OK: ", v)
-    # except EEPKIError:
-    #     res = False
-    #     print("Validation failed: ", v)
+    try:
+        proof.validate(*v[1:])
+        print("Validation OK: ", v)
+    except EEPKIError:
+        print("Validation failed: ", v)
 
 
 
