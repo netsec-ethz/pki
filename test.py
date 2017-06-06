@@ -132,13 +132,17 @@ for scp, msc in zip(scps, mscs):
     vectors.append((False, scp_label, root, None, True, True))
     # # MSC absence
     vectors.append((True, scp_label, root, msc_label[:-1], False, True))
-    # vectors.append((True, scp_label, root, msc_label+b"0", False, True))
+    vectors.append((True, scp_label, root, msc_label+b"0", False, True))
+    vectors.append((True, scp_label, root, b"\x00" + msc_label, False, True))
+    vectors.append((True, scp_label, root, b"\xff" + msc_label, False, True))
     vectors.append((False, scp_label, root, msc_label[:-1], False, False))
     vectors.append((False, scp_label, root, msc_label+b"0", False, False))
+    vectors.append((False, scp_label, root, b"\x00" + msc_label[:-1], False, False))
+    vectors.append((False, scp_label, root, b"\xff" + msc_label+b"0", False, False))
     # # SCP absence
     vectors.append((False, scp_label[:-1], root, msc_label[:-1], False, True))
     vectors.append((False, scp_label+"0", root, msc_label+b"0", False, True))
-# random.shuffle(vectors)
+random.shuffle(vectors)
 for v in vectors:
     proof = log.get_proof(v[1], v[3])
     try:
@@ -146,13 +150,9 @@ for v in vectors:
         res = True
     except EEPKIError as e:
         res = False
-        if res != v[0]:
-            print(e)
     if res != v[0]:
         print("Validation incorrect: ", v, res)
-print("Validation OK")
-
-
+print("Validation done")
 
 
 # print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
