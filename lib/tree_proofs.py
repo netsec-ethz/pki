@@ -132,20 +132,18 @@ class AbsenceProof(BaseProof):
         Single proof validation (corner case).
         """
         if self.proof1:
-            if self.proof1.entry.get_label() <= label:
-                raise EEPKIError("Single proof incorrect")
-            char = 'L'
-            chain = self.proof1.chain
             proof = self.proof1
+            char = 'L'
+            if proof.entry.get_label() <= label:
+                raise EEPKIError("Single proof1 incorrect")
         else:
-            if self.proof1.entry.get_label() >= label:
-                raise EEPKIError("Single proof incorrect")
-            char = 'R'
-            chain = self.proof1.chain
             proof = self.proof2
+            char = 'R'
+            if proof.entry.get_label() >= label:
+                raise EEPKIError("Single proof2 incorrect")
 
         # This has to be the most left or right root
-        for _, tmp in chain[1:-1]:  # Don't check 'SELF' and 'ROOT'
+        for _, tmp in proof.chain[1:-1]:  # Don't check 'SELF' and 'ROOT'
             if tmp != char:
                 raise EEPKIError("Non-boundary proof")
         if not proof.validate(None, root):
@@ -162,7 +160,7 @@ class AbsenceProof(BaseProof):
             if self.proof1.chain[int_len] != self.proof2.chain[int_len]:
                 break
             int_len -= 1
-        if int_len == 1:
+        if int_len == 0:
             raise EEPKIError("All intermediate nodes are identical")
         while int_len >= 1:
             if self.proof1.chain[int_len][1] == self.proof2.chain[int_len][1]:
@@ -286,9 +284,9 @@ class EEPKIProof(BaseProof):
         if msc_label:
             if not self.cert_proof:
                 raise EEPKIError("No MSC proof")
-            if scp_absence and not isinstance(self.cert_proof, AbsenceProof):
+            if msc_absence and not isinstance(self.cert_proof, AbsenceProof):
                 raise EEPKIError("MSC proof is not AbsenceProof")
-            if not scp_absence and not isinstance(self.cert_proof, PresenceProof):
+            if not msc_absence and not isinstance(self.cert_proof, PresenceProof):
                 raise EEPKIError("MSC proof is not PresenceProof")
         # Check entry of consistency proof:
         if not isinstance(self.cons_proof.entry, RootsEntry):
@@ -299,9 +297,11 @@ class EEPKIProof(BaseProof):
             if tmp != 'L':
                 raise EEPKIError("Not the last RootsEntry")
         # Now check policy proof
-        self.policy_proof.validate(scp_label, self.cons_proof.entry.policy_tree_root)
+        proot = self.cons_proof.entry.policy_tree_root
+        croot = self.cons_proof.entry.cert_tree_root
+        self.policy_proof.validate(scp_label, proot, scp_absence)
         if msc_label:
-            self.cert_proof.validate(msc_label, self.cons_proof.entry.cert_tree_root)
+            self.cert_proof.validate(msc_label, croot)
 
     def get_cert_entry(self):
         if self.cert_proof:

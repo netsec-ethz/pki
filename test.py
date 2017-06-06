@@ -129,9 +129,9 @@ for scp, msc in zip(scps, mscs):
     vectors.append((True, scp_label, root, msc_label, False, False))
     # w/o MSC label
     vectors.append((True, scp_label, root, None, False, False))
-    # vectors.append((False, scp_label, root, None, True, True))
+    vectors.append((False, scp_label, root, None, True, True))
     # # MSC absence
-    # vectors.append((True, scp_label, root, msc_label[:-1], False, True))
+    vectors.append((True, scp_label, root, msc_label[:-1], False, True))
     # vectors.append((True, scp_label, root, msc_label+b"0", False, True))
     vectors.append((False, scp_label, root, msc_label[:-1], False, False))
     vectors.append((False, scp_label, root, msc_label+b"0", False, False))
@@ -144,10 +144,12 @@ for v in vectors:
     try:
         proof.validate(*v[1:])
         res = True
-    except EEPKIError:
+    except EEPKIError as e:
         res = False
+        if res != v[0]:
+            print(e)
     if res != v[0]:
-        print("Validation incorrect: ", v)
+        print("Validation incorrect: ", v, res)
 print("Validation OK")
 
 
