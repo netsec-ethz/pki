@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+EEPKI_PORT = 9088
 DEFAULT_CERT_VALIDITY = 120  # In days.
 POLICY_OID = "1.2.34.56.1"
 POLICY_BINDIND_OID = "1.2.34.56.2"
