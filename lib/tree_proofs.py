@@ -151,6 +151,11 @@ class AbsenceProof(BaseProof):
         return True
 
     def _sibling_proofs(self):
+        # TODO(PSz): this is tree specific. Check how merkle.py handles trees with
+        # len(leaves) != 2^x. It may be necessary to add id for proof{1,2} and tree length
+        # to check whether they are indeed siblings. With 2^x trees it can be asserted
+        # that chains lengths are the same.
+
         # Minimum over chain lengths without 'SELF'
         int_len = min(len(self.proof1.chain), len(self.proof2.chain)) - 1
         # Start from the top, to check number of the identitcal nodes (i.e., where paths
