@@ -30,7 +30,7 @@ class Log(object):
         self.cons_tree = ConsistencyTree()
         self.policy_tree = PolicyTree()
         self.cert_tree = CertificateTree()
-        self.build()
+        self.build(add_re=False)  # Don't add new entry while pre-loaded
 
     def build(self, add_re=True):
         self.policy_tree.build()
