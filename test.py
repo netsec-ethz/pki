@@ -128,24 +128,28 @@ for scp, msc in zip(scps, mscs):
     msc_label = CertificateEntry(msc).get_label()
     vectors.append((True, scp_label, root, msc_label, False, False))
     # w/o MSC label
-    # vectors.append((True, scp_label, root, None, False, False))
+    vectors.append((True, scp_label, root, None, False, False))
     # vectors.append((False, scp_label, root, None, True, True))
     # # MSC absence
     # vectors.append((True, scp_label, root, msc_label[:-1], False, True))
     # vectors.append((True, scp_label, root, msc_label+b"0", False, True))
-    # vectors.append((False, scp_label, root, msc_label[:-1], False, False))
-    # vectors.append((False, scp_label, root, msc_label+b"0", False, False))
+    vectors.append((False, scp_label, root, msc_label[:-1], False, False))
+    vectors.append((False, scp_label, root, msc_label+b"0", False, False))
     # # SCP absence
-    # vectors.append((False, scp_label[:-1], root, msc_label[:-1], False, True))
-    # vectors.append((False, scp_label+"0", root, msc_label+b"0", False, True))
-random.shuffle(vectors)
+    vectors.append((False, scp_label[:-1], root, msc_label[:-1], False, True))
+    vectors.append((False, scp_label+"0", root, msc_label+b"0", False, True))
+# random.shuffle(vectors)
 for v in vectors:
     proof = log.get_proof(v[1], v[3])
     try:
         proof.validate(*v[1:])
-        print("Validation OK: ", v)
+        res = True
     except EEPKIError:
-        print("Validation failed: ", v)
+        res = False
+    if res != v[0]:
+        print("Validation incorrect: ", v)
+print("Validation OK")
+
 
 
 
