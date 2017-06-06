@@ -134,15 +134,11 @@ class AbsenceProof(BaseProof):
         if self.proof1:
             proof = self.proof1
             char = 'L'
-            print("CHECK1")
-            print("%s\n%s" % (proof.entry.get_label(), label))
             if label <= proof.entry.get_label():
                 raise EEPKIError("Single proof1 incorrect")
         else:
             proof = self.proof2
             char = 'R'
-            print("CHECK2")
-            print("%s\n%s" % (proof.entry.get_label(), label))
             if label >= proof.entry.get_label():
                 raise EEPKIError("Single proof2 incorrect")
 
