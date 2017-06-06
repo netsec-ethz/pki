@@ -151,8 +151,8 @@ class AbsenceProof(BaseProof):
         return True
 
     def _sibling_proofs(self):
-        # Minimum over chain lengths without 'SELF' and 'ROOT'
-        int_len = min(len(self.proof1.chain), len(self.proof2.chain)) - 2
+        # Minimum over chain lengths without 'SELF'
+        int_len = min(len(self.proof1.chain), len(self.proof2.chain)) - 1
         # Start from the top, to check number of the identitcal nodes (i.e., where paths
         # converge)
         while int_len >= 1:
