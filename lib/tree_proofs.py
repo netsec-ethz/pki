@@ -151,20 +151,20 @@ class AbsenceProof(BaseProof):
         return True
 
     def _sibling_proofs(self):
-        if len(self.proof1.chain) != len(self.proof2.chain):
-            raise EEPKIError("Proofs lengths mismatch")
-        int_len = len(self.proof1.chain) - 2  # length without 'SELF' and 'ROOT'
+        # Minimum over chain lengths without 'SELF' and 'ROOT'
+        int_len = min(len(self.proof1.chain), len(self.proof2.chain)) - 2
         # Start from the top, to check number of the identitcal nodes (i.e., where paths
         # converge)
         while int_len >= 1:
-            if self.proof1.chain[int_len] != self.proof2.chain[int_len]:
+            if self.proof1.chain[-int_len] == self.proof2.chain[-int_len]:
                 break
             int_len -= 1
         if int_len == 0:
-            raise EEPKIError("All intermediate nodes are identical")
+            raise EEPKIError("All intermediate nodes are different")
+        # Here paths of the proofs converge
         while int_len >= 1:
-            if self.proof1.chain[int_len][1] == self.proof2.chain[int_len][1]:
-                raise EEPKIError("The same direction on divergent paths")
+            if self.proof1.chain[-int_len][1] != self.proof2.chain[-int_len][1]:
+                raise EEPKIError("Different direciton on the coverged paths")
             int_len -= 1
         return True
 
