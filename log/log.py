@@ -32,11 +32,12 @@ class Log(object):
         self.cert_tree = CertificateTree()
         self.build()
 
-    def build(self):
+    def build(self, add_re=True):
         self.policy_tree.build()
         self.cert_tree.build()
-        re = RootsEntry(self.policy_tree.get_root(), self.cons_tree.build())
-        self.cons_tree.add(re)
+        if add_re:
+            re = RootsEntry(self.policy_tree.get_root(), self.cert_tree.get_root())
+            self.cons_tree.add(re)
         self.cons_tree.build()
 
     def add_scp(self, scp):

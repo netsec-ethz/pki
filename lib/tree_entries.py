@@ -118,6 +118,9 @@ class RootsEntry(TreeEntry):
         res[MsgFields.CERT_ROOT] = self.cert_tree_root
         return dict_to_cbor(res)
 
+    def __str__(self):
+        return "PolRoot: %s\nCertRoot: %s" % (self.policy_tree_root, self.cert_tree_root)
+
 
 class PolicyEntry(TreeEntry):
     """

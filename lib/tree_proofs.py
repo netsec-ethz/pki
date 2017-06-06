@@ -75,7 +75,6 @@ class PresenceProof(BaseProof):
         if label and label != self.entry.get_label():
             raise EEPKIError("Labels mismatch")
         if self.get_entry_hash() != self.entry.get_hash():
-            print("%s\n%s\n%s\n%s" % (self.entry, self.chain, self.get_entry_hash(),self.entry.get_hash()))
             raise EEPKIError("Hash of the entry doesn't match the proof")
         try:
             check_chain(self.chain)
@@ -296,6 +295,9 @@ class EEPKIProof(BaseProof):
             raise EEPKIError("Consistency proof not for RootsEntry")
         # Start the actual validation by checking consistency proof
         self.cons_proof.validate(None, root)
+        for _, tmp in self.cons_proof.chain[1:-1]:
+            if tmp != 'L':
+                raise EEPKIError("Not the last RootsEntry")
         # Now check policy proof
         self.policy_proof.validate(scp_label, self.cons_proof.entry.policy_tree_root)
         if msc_label:
