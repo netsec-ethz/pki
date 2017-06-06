@@ -247,7 +247,7 @@ class PolicyTree(object):
         for entry in tree.entries:
             if entry.subtree:
                 self.build(entry.subtree)
-        print("Building: %s" % tree)
+        # print("Building: %s" % tree)
         tree.build()
 
     def __str__(self):

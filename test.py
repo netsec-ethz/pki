@@ -108,6 +108,7 @@ for i in domain_names:
     tmp.domain_name = i
     mscs.append(tmp)
 
+print("Starting log and building trees")
 log = Log()
 all_ = scps + mscs
 random.shuffle(all_)
@@ -120,6 +121,7 @@ for e in all_:
 log.build()
 
 
+print("Testing proofs")
 # Prepare validation vectors
 vectors = []
 root = log.get_root()
@@ -152,7 +154,6 @@ for v in vectors:
         res = False
     if res != v[0]:
         print("Validation incorrect: ", v, res)
-print("Validation done")
 
 
 # print(certtree.get_entry(label), label==certtree.get_entry(label).get_label())
