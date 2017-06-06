@@ -34,9 +34,12 @@ class EECert(object):
         self.pem = pem
         self.domain_name = ""
         self.chains = []
-        self._parse(pem)
+        self.parse(pem)
 
-    def _parse(self, pem):
+    def parse(self, pem):
+        raise NotImplementedError
+
+    def pack(self):
         raise NotImplementedError
 
     def verify_chains(self, trusted_certs):
@@ -65,7 +68,7 @@ class MSC(EECert):
         super().__init__(pem)
         assert self._verify_msc_integrity()  # TODO(PSz): raise an exception
 
-    def _parse(self, pem):
+    def parse(self, pem):
         certs = pem_to_certs(pem)
         if not certs:
             return
@@ -112,7 +115,7 @@ class SCP(EECert):
         self.policy = b""
         super().__init__(pem)
 
-    def _parse(self, pem):
+    def parse(self, pem):
         certs = pem_to_certs(pem)
         if not certs:
             return
@@ -144,7 +147,7 @@ class Revocation(object):
     """
     def __init__(self, raw):
         self.raw = raw
-        self._parse(raw)
+        self.parse(raw)
 
-    def _parse(self, pem):
+    def parse(self, pem):
         raise NotImplementedError
