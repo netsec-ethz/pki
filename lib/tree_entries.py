@@ -64,9 +64,9 @@ class RevocationEntry(TreeEntry):
         self.rev = Revocation(dict_[MsgFields.REV])
 
     def pack(self):
-        res = {}
-        res[MsgFields.REV] = self.rev.pack()
-        return dict_to_bin(res)
+        dict_ = {}
+        dict_[MsgFields.REV] = self.rev.pack()
+        return dict_to_bin(dict_)
 
     @classmethod
     def from_values(cls, rev):
@@ -88,9 +88,9 @@ class MSCEntry(TreeEntry):
         self.msc = MSC(dict_[MsgFields.MSC])
 
     def pack(self):
-        res = {}
-        res[MsgFields.MSC] = self.msc.pack()
-        return dict_to_bin(res)
+        dict_ = {}
+        dict_[MsgFields.MSC] = self.msc.pack()
+        return dict_to_bin(dict_)
 
     @classmethod
     def from_values(cls, msc):
@@ -121,13 +121,13 @@ class CertificateEntry(TreeEntry):
             self.rev = Revocation(dict_[MsgFields.REV])
 
     def pack(self):
-        res = {}
-        res[MsgFields.MSC] = self.msc.pack()
+        dict_ = {}
+        dict_[MsgFields.MSC] = self.msc.pack()
         if self.rev:
-            res[MsgFields.REV] = self.rev.pack()
+            dict_[MsgFields.REV] = self.rev.pack()
         else:
-            res[MsgFields.REV] = None
-        return dict_to_bin(res)
+            dict_[MsgFields.REV] = None
+        return dict_to_bin(dict_)
 
     def get_label(self):
         return hash_function(self.msc.pem).digest()
@@ -153,9 +153,9 @@ class SCPEntry(TreeEntry):
         self.scp = SCP(dict_[MsgFields.SCP])
 
     def pack(self):
-        res = {}
-        res[MsgFields.SCP] = self.scp.pack()
-        return dict_to_bin(res)
+        dict_ = {}
+        dict_[MsgFields.SCP] = self.scp.pack()
+        return dict_to_bin(dict_)
 
     @classmethod
     def from_values(cls, scp):
@@ -184,10 +184,10 @@ class RootsEntry(TreeEntry):
         self.cert_tree_root = dict_[MsgFields.CERT_ROOT]
 
     def pack(self):
-        res = {}
-        res[MsgFields.POLICY_ROOT] = self.policy_tree_root
-        res[MsgFields.CERT_ROOT] = self.cert_tree_root
-        return dict_to_bin(res)
+        dict_ = {}
+        dict_[MsgFields.POLICY_ROOT] = self.policy_tree_root
+        dict_[MsgFields.CERT_ROOT] = self.cert_tree_root
+        return dict_to_bin(dict_)
 
     @classmethod
     def from_values(cls, policy_tree_root, cert_tree_root):
@@ -226,19 +226,19 @@ class PolicyEntry(TreeEntry):
         self.subroot = dict_[MsgFields.SUBROOT]
 
     def pack(self):
-        res = {}
-        res[MsgFields.DNAME] = self.domain_name
+        dict_ = {}
+        dict_[MsgFields.DNAME] = self.domain_name
         if self.scp:
-            res[MsgFields.SCP] = self.scp.pack()
+            dict_[MsgFields.SCP] = self.scp.pack()
         else:
-            res[MsgFields.SCP] = None
+            dict_[MsgFields.SCP] = None
         if self.subtree:
-            res[MsgFields.SUBROOT] = self.subtree.get_root()
+            dict_[MsgFields.SUBROOT] = self.subtree.get_root()
         elif self.subroot:
-            res[MsgFields.SUBROOT] = self.subroot
+            dict_[MsgFields.SUBROOT] = self.subroot
         else:
-            res[MsgFields.SUBROOT] = None
-        return dict_to_bin(res)
+            dict_[MsgFields.SUBROOT] = None
+        return dict_to_bin(dict_)
 
     @classmethod
     def from_values(cls, domain_name, scp=None, subtree=None):

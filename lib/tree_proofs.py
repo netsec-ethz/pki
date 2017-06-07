@@ -52,14 +52,14 @@ class PresenceProof(BaseProof):
         super().__init__(raw)
 
     def pack(self):
-        tmp = super().__pack__()
-        # TODO(PSz): other fields + base64
-        return dict_to_bin(tmp)
+        dict_ = {}
+        return dict_to_bin(dict_)
 
     @classmethod
     def from_values(cls, entry, chain):
         inst = cls()
-        inst.entry, inst.chain = entry, chain
+        inst.entry = entry
+        inst.chain = chain
         return inst
 
     def get_root(self):
@@ -180,9 +180,8 @@ class AbsenceProof(BaseProof):
         pass
 
     def pack(self):
-        tmp = super().__pack__()
-        # TODO(PSz): other fields + base64
-        return dict_to_bin(tmp)
+        dict_ = {} 
+        return dict_to_bin(dict_)
 
     @classmethod
     def from_values(cls, proof1, proof2):
