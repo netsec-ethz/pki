@@ -36,5 +36,4 @@ if __name__ == "__main__":
         pem += create_x509cert(domain, pubkey, ca_cert,
                                ca_privkey, exts=[policy_ext])
         i += 2
-    print(pem.decode('utf-8'))
-
+    print(pem.decode('utf-8'), end='')

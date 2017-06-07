@@ -40,7 +40,10 @@ class EECert(object):
         raise NotImplementedError
 
     def pack(self):
-        raise NotImplementedError
+        pems = []
+        for chain in self.chains:
+            pems.append(certs_to_pem(chain))
+        return b"".join(pems)
 
     def verify_chains(self, trusted_certs):
         print("verify_chains")
@@ -85,6 +88,11 @@ class MSC(EECert):
                 self.chains.insert(0, chain)
                 chain = []
         assert not chain  # TODO(PSz): unterminated chain, raise an exception
+
+    def pack(self):
+        chain_pem = super().pack()
+        policy_pem = certs_to_pem([self.policy_binding])
+        return b"".join([chain_pem, policy_pem])
 
     def _verify_msc_integrity(self):
         print("_verify_msc_integrity")

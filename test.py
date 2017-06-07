@@ -59,10 +59,17 @@ if __name__ == "__main__":
     if len(sys.argv) != 4:
         print("%s <MSC> <SCP> <TRC>" % sys.argv[0])
         sys.exit()
+    # Create a MSC and SCP and test basic parsing and packing
     with open(sys.argv[1], "rb") as f:
-        msc = MSC(f.read())
+        pem = f.read()
+    msc = MSC(MSC(pem).pack())
+    assert msc.pack() == pem, "parse()/pack() failed"
+
     with open(sys.argv[2], "rb") as f:
-        scp = SCP(f.read())
+        pem = f.read()
+    scp = SCP(SCP(pem).pack())
+    assert scp.pack() == pem, "parse()/pack() failed"
+
     with open(sys.argv[3], "r") as f:
         trc = TRC.from_raw(f.read())
 

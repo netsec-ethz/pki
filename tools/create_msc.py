@@ -38,4 +38,4 @@ if __name__ == "__main__":
     # Create self signed cert with a policy binding
     binding = binding_from_pem(pem)
     pem += create_x509cert(domain, pubkey, None, policy_privkey, exts=[binding])
-    print(pem.decode('utf-8'))
+    print(pem.decode('utf-8'), end='')
