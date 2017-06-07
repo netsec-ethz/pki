@@ -233,21 +233,19 @@ class PolicyProof(BaseProof):
     """
     TYPE = MsgFields.POLICY_PROOF
     def __init__(self, raw=None):
-        """
-        """
         self.proofs = []
         super().__init__(raw)
 
     def parse(self, raw):
         list_ = bin_to_obj(raw)
         if not len(list_):
-            raise EEPKIParseError("#keys == 0")
-        # TODO(PSz): This is pretty ugly, revise this encoding
+            raise EEPKIParseError("Empty list")
+        # TODO(PSz): This is pretty ugly, revise this encoding. Moving type to Proof helps
         tmp = list_[0]
         if MsgFields.ENTRY in bin_to_obj(tmp):
             self.proofs.append(PresenceProof(tmp))
         else:
-            self.proofs.append(Absence(tmp))
+            self.proofs.append(AbsenceProof(tmp))
         for tmp in list_[1:]:
             self.proofs.append(PresenceProof(tmp))
 
@@ -317,6 +315,29 @@ class EEPKIProof(BaseProof):
         self.policy_proof = None  # PolicyTree's proof
         self.cert_proof = None  # CertificateTree's proof
         super().__init__(raw)
+
+    def parse(self, raw):
+        list_ = bin_to_obj(raw)
+        if len(list_) != 3:
+            raise EEPKIParseError("len(list) == 3")
+        if list_[0]:
+            self.cons_proof = PresenceProof(list_[0])
+        if list_[1]:
+            self.policy_proof = PolicyProof(list_[1])
+        tmp = list_[2]
+        if MsgFields.ENTRY in bin_to_obj(tmp)
+            self.cert_proof = PresenceProof(tmp)
+        else:
+            self.cert_proof = AbsenceProof(tmp)
+
+    def pack(self):
+        list_ = []
+        for proof in [self.cons_proof, self.policy_proof, self.cert_proof]:
+            if proof:
+                list_.append(proof.pack())
+            else:
+                list_.append(None)
+        return obj_to_bin(list_)
 
     @classmethod
     def from_values(cls, cons_proof, policy_proof, cert_proof=None):
