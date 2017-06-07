@@ -188,5 +188,4 @@ for v in vectors:
     if res != v[0]:
         print("Validation incorrect: ", v, res)
     # Test proof packing/parsing
-    # print(proof.pack())
-    # EEPKIProof(proof.pack())
+    assert EEPKIProof(proof.pack()).pack() == proof.pack()

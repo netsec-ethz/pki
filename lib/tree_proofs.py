@@ -62,14 +62,13 @@ class PresenceProof(BaseProof):
         if MsgFields.CHAIN not in dict_:
             raise EEPKIParseError("CHAIN not provided")
         self.chain = dict_[MsgFields.CHAIN]
-        del dict_[MsgFields.CHAIN]
-        # Get entry
-        type_, raw = dict_.popitem()
-        self.entry = build_entry(raw)
+        if MsgFields.ENTRY not in dict_ or not dict_[MsgFields.ENTRY]:
+            raise EEPKIParseError("ENTRY not provided")
+        self.entry = build_entry(dict_[MsgFields.ENTRY])
 
     def pack(self):
         dict_ = super().pack()
-        dict_[self.entry.get_type()] = self.entry.pack()
+        dict_[MsgFields.ENTRY] = self.entry.pack()
         dict_[MsgFields.CHAIN] = self.chain
         return obj_to_bin(dict_)
 
@@ -121,7 +120,6 @@ class AbsenceProof(BaseProof):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        print(dict_)
         if len(dict_) != 3:
             raise EEPKIParseError("#keys != 2")
         if MsgFields.PROOF1 not in dict_:
@@ -246,13 +244,8 @@ class PolicyProof(BaseProof):
         if not len(list_):
             raise EEPKIParseError("Empty list")
         # TODO(PSz): This is pretty ugly, revise this encoding. Moving type to Proof helps
-        tmp = list_[0]
-        if MsgFields.ENTRY in bin_to_obj(tmp):
-            self.proofs.append(PresenceProof(tmp))
-        else:
-            self.proofs.append(AbsenceProof(tmp))
-        for tmp in list_[1:]:
-            self.proofs.append(PresenceProof(tmp))
+        for tmp in list_:
+            self.proofs.append(build_proof(tmp))
 
     def pack(self):
         list_ = []
@@ -330,10 +323,11 @@ class EEPKIProof(BaseProof):
         if list_[1]:
             self.policy_proof = PolicyProof(list_[1])
         tmp = list_[2]
-        if MsgFields.ENTRY in bin_to_obj(tmp):
-            self.cert_proof = PresenceProof(tmp)
-        else:
-            self.cert_proof = AbsenceProof(tmp)
+        if tmp:
+            if MsgFields.ENTRY in bin_to_obj(tmp):
+                self.cert_proof = PresenceProof(tmp)
+            else:
+                self.cert_proof = AbsenceProof(tmp)
 
     def pack(self):
         list_ = []
@@ -405,5 +399,15 @@ class EEPKIProof(BaseProof):
         res.append(str(self.cert_proof))
         return "\n".join(res)
 
-def make_proof(raw):
-    pass
+
+
+def build_proof(raw):
+    classes = [AbsenceProof, PresenceProof]
+    dict_ = bin_to_obj(raw)
+    if MsgFields.TYPE not in dict_:
+        raise EEPKIParseError("Type not found")
+    type_ = dict_[MsgFields.TYPE]
+    for cls in classes:
+        if cls.TYPE == type_:
+            return cls(raw)
+    raise EEPKIParseError("Class of type %s not found" % type_)
