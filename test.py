@@ -136,8 +136,8 @@ print("Testing proofs")
 vectors = []
 root = log.get_root()
 for scp, msc in zip(scps, mscs):
-    scp_label = SCPEntry(scp).get_label()
-    msc_label = CertificateEntry(msc).get_label()
+    scp_label = SCPEntry.from_values(scp).get_label()
+    msc_label = CertificateEntry.from_values(msc).get_label()
     # full, successful validation
     vectors.append((True, scp_label, root, msc_label, False, False))
     # w/o MSC label

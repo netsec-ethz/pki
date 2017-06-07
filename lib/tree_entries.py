@@ -21,8 +21,9 @@ from .defines import MsgFields
 @total_ordering
 class TreeEntry(object):
     TYPE = None
-    # def __init__(self, raw):
-    #     self.parse(raw)
+    def __init__(self, raw):
+        if raw:
+            self.parse(raw)
 
     def parse(self, raw):
         raise NotImplementedError
@@ -49,9 +50,9 @@ class TreeEntry(object):
 # PSz: consider id as get_label() for entries of ConsistencyTree
 class RevocationEntry(TreeEntry):
     TYPE = MsgFields.REV
-    def __init__(self, rev):
-        self.rev = rev
-        super().__init__()
+    def __init__(self, raw=None):
+        self.rev = None
+        super().__init__(raw)
 
     def pack(self):
         res = super().pack()
@@ -67,9 +68,9 @@ class RevocationEntry(TreeEntry):
 
 class MSCEntry(TreeEntry):
     TYPE = MsgFields.MSC
-    def __init__(self, msc):
-        self.msc = msc
-        super().__init__()
+    def __init__(self, raw=None):
+        self.msc = None
+        super().__init__(raw)
 
     def pack(self):
         res = super().pack()
@@ -89,10 +90,10 @@ class CertificateEntry(TreeEntry):
     the CertificateTree.
     """
     TYPE = MsgFields.CERT
-    def __init__(self, msc, rev=None):
-        self.msc = msc
-        self.rev = rev
-        super().__init__()
+    def __init__(self, raw=None):
+        self.msc = None
+        self.rev = None
+        super().__init__(raw)
 
     def pack(self):
         res = super().pack()
@@ -116,9 +117,9 @@ class CertificateEntry(TreeEntry):
 
 class SCPEntry(TreeEntry):
     TYPE = MsgFields.SCP
-    def __init__(self, scp):
-        self.scp = scp
-        super().__init__()
+    def __init__(self, raw=None):
+        self.scp = None
+        super().__init__(raw)
 
     def pack(self):
         res = super().pack()
@@ -137,9 +138,10 @@ class SCPEntry(TreeEntry):
 
 class RootsEntry(TreeEntry):
     TYPE = MsgFields.ROOTS
-    def __init__(self, policy_tree_root, cert_tree_root):
-        self.policy_tree_root = policy_tree_root
-        self.cert_tree_root = cert_tree_root
+    def __init__(self, raw=None):
+        self.policy_tree_root = None
+        self.cert_tree_root = None
+        super().__init__(raw)
 
     def pack(self):
         res = super().pack()
@@ -163,13 +165,11 @@ class PolicyEntry(TreeEntry):
     Representation of an SCP and its subtree. These entries build the PolicyTree.
     """
     TYPE = MsgFields.POLICY
-    def __init__(self, domain_name, scp=None, subtree=None):
-        self.domain_name = domain_name
-        if scp:
-            assert scp.domain_name == self.domain_name
-        self.scp = scp
-        self.subtree = subtree
-        super().__init__()
+    def __init__(self, raw=None):
+        self.domain_name = None
+        self.scp = None
+        self.subtree = None
+        super().__init__(raw)
 
     def pack(self):
         res = super().pack()

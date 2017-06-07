@@ -196,7 +196,7 @@ class PolicyTree(object):
             entry = tree.get_entry(name)
             if not entry:
                 # print("Creating entry for %s" % name)
-                entry = PolicyEntry(name)
+                entry = PolicyEntry.from_values(name)
                 tree.add(entry)
             tree = entry.subtree
             if not tree:

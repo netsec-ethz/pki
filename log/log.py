@@ -36,24 +36,24 @@ class Log(object):
         self.policy_tree.build()
         self.cert_tree.build()
         if add_re:
-            re = RootsEntry(self.policy_tree.get_root(), self.cert_tree.get_root())
+            re = RootsEntry.from_values(self.policy_tree.get_root(), self.cert_tree.get_root())
             self.cons_tree.add(re)
         self.cons_tree.build()
 
     def add_scp(self, scp):
-        se = SCPEntry(scp)
+        se = SCPEntry.from_values(scp)
         self.cons_tree.add(se)
-        pe = PolicyEntry(scp.domain_name, scp)
+        pe = PolicyEntry.from_values(scp.domain_name, scp)
         self.policy_tree.add(pe)
 
     def add_msc(self, msc):
-        me = MSCEntry(msc)
+        me = MSCEntry.from_values(msc)
         self.cons_tree.add(me)
-        ce = CertificateEntry(msc)
+        ce = CertificateEntry.from_values(msc)
         self.cert_tree.add(ce)
 
     def add_rev(self, rev):
-        re = RevocationEntry(rev)
+        re = RevocationEntry.from_values(rev)
         self.cons_tree.add(re)
         ce = self.cert_tree.get_entry(rev.label)
         if not ce.rev:
