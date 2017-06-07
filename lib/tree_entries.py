@@ -21,11 +21,14 @@ from .defines import MsgFields
 @total_ordering
 class TreeEntry(object):
     TYPE = None
-    def pack(self):  # Output is used for building an actual tree
-        return {MsgFields.TYPE: self.TYPE}
+    # def __init__(self, raw):
+    #     self.parse(raw)
 
     def parse(self, raw):
         raise NotImplementedError
+
+    def pack(self):  # Output is used for building an actual tree
+        return {MsgFields.TYPE: self.TYPE}
 
     def get_hash(self):
         return hash_function(self.pack()).digest()
@@ -42,6 +45,7 @@ class TreeEntry(object):
     def is_equal(self, other):
         return self.pack() == other.pack()
 
+
 # PSz: consider id as get_label() for entries of ConsistencyTree
 class RevocationEntry(TreeEntry):
     TYPE = MsgFields.REV
@@ -51,8 +55,14 @@ class RevocationEntry(TreeEntry):
 
     def pack(self):
         res = super().pack()
-        res[MsgFields.REV] = self.rev.raw
+        res[MsgFields.REV] = self.rev.pack()
         return dict_to_cbor(res)
+
+    @classmethod
+    def from_values(cls, rev):
+        inst = cls()
+        inst.rev = rev
+        return inst
 
 
 class MSCEntry(TreeEntry):
@@ -63,8 +73,14 @@ class MSCEntry(TreeEntry):
 
     def pack(self):
         res = super().pack()
-        res[MsgFields.MSC] = self.msc.pem
+        res[MsgFields.MSC] = self.msc.pack()
         return dict_to_cbor(res)
+
+    @classmethod
+    def from_values(cls, msc):
+        inst = cls()
+        inst.msc = msc
+        return inst
 
 
 class CertificateEntry(TreeEntry):
@@ -75,20 +91,27 @@ class CertificateEntry(TreeEntry):
     TYPE = MsgFields.CERT
     def __init__(self, msc, rev=None):
         self.msc = msc
-        self.rev = rev or None
+        self.rev = rev
         super().__init__()
 
     def pack(self):
         res = super().pack()
-        res[MsgFields.MSC] = self.msc.pem
+        res[MsgFields.MSC] = self.msc.pack()
         if self.rev:
-            res[MsgFields.REV] = self.rev.raw
+            res[MsgFields.REV] = self.rev.pack()
         else:
             res[MsgFields.REV] = None
         return dict_to_cbor(res)
 
     def get_label(self):
         return hash_function(self.msc.pem).digest()
+
+    @classmethod
+    def from_values(cls, msc, rev=None):
+        inst = cls()
+        inst.msc = msc
+        inst.rev = rev
+        return inst
 
 
 class SCPEntry(TreeEntry):
@@ -99,8 +122,14 @@ class SCPEntry(TreeEntry):
 
     def pack(self):
         res = super().pack()
-        res[MsgFields.SCP] = self.scp.pem
+        res[MsgFields.SCP] = self.scp.pack()
         return dict_to_cbor(res)
+
+    @classmethod
+    def from_values(cls, scp):
+        inst = cls()
+        inst.scp = scp
+        return inst
 
     def get_label(self):
         return self.scp.domain_name
@@ -117,6 +146,13 @@ class RootsEntry(TreeEntry):
         res[MsgFields.POLICY_ROOT] = self.policy_tree_root
         res[MsgFields.CERT_ROOT] = self.cert_tree_root
         return dict_to_cbor(res)
+
+    @classmethod
+    def from_values(cls, policy_tree_root, cert_tree_root):
+        inst = cls()
+        inst.policy_tree_root = policy_tree_root
+        inst.cert_tree_root = cert_tree_root
+        return inst
 
     def __str__(self):
         return "PolRoot: %s\nCertRoot: %s" % (self.policy_tree_root, self.cert_tree_root)
@@ -138,7 +174,7 @@ class PolicyEntry(TreeEntry):
     def pack(self):
         res = super().pack()
         if self.scp:
-            res[MsgFields.SCP] = self.scp.pem
+            res[MsgFields.SCP] = self.scp.pack()
         else:
             res[MsgFields.SCP] = None
         if self.subtree:
@@ -146,6 +182,16 @@ class PolicyEntry(TreeEntry):
         else:
             res[MsgFields.SUBROOT] = None
         return dict_to_cbor(res)
+
+    @classmethod
+    def from_values(cls, domain_name, scp=None, subtree=None):
+        inst = cls()
+        inst.domain_name = domain_name
+        if scp:
+            assert scp.domain_name == inst.domain_name
+        inst.scp = scp
+        inst.subtree = subtree
+        return inst
 
     def get_label(self):
         return self.domain_name
