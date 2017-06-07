@@ -53,6 +53,9 @@ def verifier(msc, scp, trc, domain_name, sec_lvl=SecLevel.MEDIUM):
     else:
         print("Unknown res: %s" % res)
 
+def test_pack_parse(msc, scp):
+    pass
+
 
 if __name__ == "__main__":
     # PYTHONPATH=..:../scion ./test.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc
@@ -135,6 +138,7 @@ root = log.get_root()
 for scp, msc in zip(scps, mscs):
     scp_label = SCPEntry(scp).get_label()
     msc_label = CertificateEntry(msc).get_label()
+    # full, successful validation
     vectors.append((True, scp_label, root, msc_label, False, False))
     # w/o MSC label
     vectors.append((True, scp_label, root, None, False, False))
