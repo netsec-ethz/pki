@@ -17,7 +17,7 @@ from merkle import hash_function
 
 from .cert import MSC, Revocation, SCP
 from .defines import EEPKIParseError, MsgFields
-from .utils import bin_to_dict, dict_to_bin
+from .utils import bin_to_obj, obj_to_bin
 
 @total_ordering
 class TreeEntry(object):
@@ -58,7 +58,7 @@ class RevocationEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_dict(raw)
+        dict_ = bin_to_obj(raw)
         if not MsgFields.REV in dict_:
             raise EEPKIParseError("No REV entry")
         self.rev = Revocation(dict_[MsgFields.REV])
@@ -66,7 +66,7 @@ class RevocationEntry(TreeEntry):
     def pack(self):
         dict_ = {}
         dict_[MsgFields.REV] = self.rev.pack()
-        return dict_to_bin(dict_)
+        return obj_to_bin(dict_)
 
     @classmethod
     def from_values(cls, rev):
@@ -82,7 +82,7 @@ class MSCEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_dict(raw)
+        dict_ = bin_to_obj(raw)
         if not MsgFields.MSC in dict_:
             raise EEPKIParseError("No MSC entry")
         self.msc = MSC(dict_[MsgFields.MSC])
@@ -90,7 +90,7 @@ class MSCEntry(TreeEntry):
     def pack(self):
         dict_ = {}
         dict_[MsgFields.MSC] = self.msc.pack()
-        return dict_to_bin(dict_)
+        return obj_to_bin(dict_)
 
     @classmethod
     def from_values(cls, msc):
@@ -111,7 +111,7 @@ class CertificateEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_dict(raw)
+        dict_ = bin_to_obj(raw)
         if not MsgFields.MSC in dict_:
             raise EEPKIParseError("No MSC entry")
         self.msc = MSC(dict_[MsgFields.MSC])
@@ -127,7 +127,7 @@ class CertificateEntry(TreeEntry):
             dict_[MsgFields.REV] = self.rev.pack()
         else:
             dict_[MsgFields.REV] = None
-        return dict_to_bin(dict_)
+        return obj_to_bin(dict_)
 
     def get_label(self):
         return hash_function(self.msc.pem).digest()
@@ -147,7 +147,7 @@ class SCPEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_dict(raw)
+        dict_ = bin_to_obj(raw)
         if not MsgFields.SCP in dict_:
             raise EEPKIParseError("No SCP entry")
         self.scp = SCP(dict_[MsgFields.SCP])
@@ -155,7 +155,7 @@ class SCPEntry(TreeEntry):
     def pack(self):
         dict_ = {}
         dict_[MsgFields.SCP] = self.scp.pack()
-        return dict_to_bin(dict_)
+        return obj_to_bin(dict_)
 
     @classmethod
     def from_values(cls, scp):
@@ -175,7 +175,7 @@ class RootsEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_dict(raw)
+        dict_ = bin_to_obj(raw)
         if not MsgFields.POLICY_ROOT in dict_:
             raise EEPKIParseError("No POLICY_ROOT entry")
         self.policy_tree_root = dict_[MsgFields.POLICY_ROOT]
@@ -187,7 +187,7 @@ class RootsEntry(TreeEntry):
         dict_ = {}
         dict_[MsgFields.POLICY_ROOT] = self.policy_tree_root
         dict_[MsgFields.CERT_ROOT] = self.cert_tree_root
-        return dict_to_bin(dict_)
+        return obj_to_bin(dict_)
 
     @classmethod
     def from_values(cls, policy_tree_root, cert_tree_root):
@@ -213,7 +213,7 @@ class PolicyEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_dict(raw)
+        dict_ = bin_to_obj(raw)
         if not MsgFields.DNAME in dict_:
             raise EEPKIParseError("No DNAME entry")
         self.domain_name = dict_[MsgFields.DNAME]
@@ -238,7 +238,7 @@ class PolicyEntry(TreeEntry):
             dict_[MsgFields.SUBROOT] = self.subroot
         else:
             dict_[MsgFields.SUBROOT] = None
-        return dict_to_bin(dict_)
+        return obj_to_bin(dict_)
 
     @classmethod
     def from_values(cls, domain_name, scp=None, subtree=None):

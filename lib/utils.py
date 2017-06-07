@@ -14,10 +14,10 @@
 import cbor
 
 # FIXME(PSz): to be replaced by canonical CBOR
-def dict_to_bin(dict_):
+def obj_to_bin(dict_):
     return cbor.dumps(dict_, sort_keys=True)
 
-def bin_to_dict(raw):
+def bin_to_obj(raw):
     return cbor.loads(raw)
 
 def get_domains(domain_name):

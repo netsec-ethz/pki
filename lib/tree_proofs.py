@@ -17,7 +17,7 @@ from merkle import check_chain, MerkleError
 
 from .defines import EEPKIError, MsgFields
 from .tree_entries import RootsEntry, build_entry
-from .utils import dict_to_bin, get_domains
+from .utils import obj_to_bin, get_domains
 
 
 class BaseProof(object):
@@ -52,7 +52,7 @@ class PresenceProof(BaseProof):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_dict(raw)
+        dict_ = bin_to_obj(raw)
         if len(dict_) != 2:  # FIXME(PSz): other parse()s need that as well.
             raise EEPKIParseError("#keys != 2")
         if MsgFields.CHAIN not in dict_:
@@ -67,7 +67,7 @@ class PresenceProof(BaseProof):
         dict_ = {}
         dict_[self.entry.get_type()] = self.entry
         dict_[MsgFields.CHAIN] = self.chain
-        return dict_to_bin(dict_)
+        return obj_to_bin(dict_)
 
     @classmethod
     def from_values(cls, entry, chain):
@@ -116,7 +116,7 @@ class AbsenceProof(BaseProof):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_dict(raw)
+        dict_ = bin_to_obj(raw)
         if len(dict_) != 2:
             raise EEPKIParseError("#keys != 2")
         if MsgFields.PROOF1 not in dict_:
@@ -138,7 +138,7 @@ class AbsenceProof(BaseProof):
             dict_[MsgFields.PROOF2] = self.proof2.pack()
         else:
             dict_[MsgFields.PROOF2] = None
-        return dict_to_bin(dict_)
+        return obj_to_bin(dict_)
 
     @classmethod
     def from_values(cls, proof1, proof2):
@@ -239,12 +239,12 @@ class PolicyProof(BaseProof):
         super().__init__(raw)
 
     def parse(self, raw):
-        list_ = bin_to_dict(raw)
+        list_ = bin_to_obj(raw)
         if not len(list_):
             raise EEPKIParseError("#keys == 0")
         # TODO(PSz): This is pretty ugly, revise this encoding
         tmp = list_[0]
-        if MsgFields.ENTRY in bin_to_dict(tmp):
+        if MsgFields.ENTRY in bin_to_obj(tmp):
             self.proofs.append(PresenceProof(tmp))
         else:
             self.proofs.append(Absence(tmp))
@@ -255,7 +255,7 @@ class PolicyProof(BaseProof):
         list_ = []
         for proof in self.proofs:
             list_.append(proof.pack())
-        return dict_to_bin(list_)
+        return obj_to_bin(list_)
 
     @classmethod
     def from_values(cls, proofs):
