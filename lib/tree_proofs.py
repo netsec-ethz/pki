@@ -238,6 +238,25 @@ class PolicyProof(BaseProof):
         self.proofs = []
         super().__init__(raw)
 
+    def parse(self, raw):
+        list_ = bin_to_dict(raw)
+        if not len(list_):
+            raise EEPKIParseError("#keys == 0")
+        # TODO(PSz): This is pretty ugly, revise this encoding
+        tmp = list_[0]
+        if MsgFields.ENTRY in bin_to_dict(tmp):
+            self.proofs.append(PresenceProof(tmp))
+        else:
+            self.proofs.append(Absence(tmp))
+        for tmp in list_[1:]:
+            self.proofs.append(PresenceProof(tmp))
+
+    def pack(self):
+        list_ = []
+        for proof in self.proofs:
+            list_.append(proof.pack())
+        return dict_to_bin(list_)
+
     @classmethod
     def from_values(cls, proofs):
         inst = cls()
