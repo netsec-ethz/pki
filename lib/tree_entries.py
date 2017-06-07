@@ -252,3 +252,11 @@ class PolicyEntry(TreeEntry):
 
     def get_label(self):
         return self.domain_name
+
+
+def build_entry(type_, raw):
+    classes = [RevocationEntry, MSCEntry CertificateEntry, SCPEntry, RootsEntry, PolicyEntry]
+    for cls in classes:
+        if cls.TYPE == type_:
+            return cls(raw)
+    raise EEPKIParseError("Class of type %s not found" % type_)

@@ -16,7 +16,7 @@ from base64 import b64decode, b64encode
 from merkle import check_chain, MerkleError
 
 from .defines import EEPKIError, MsgFields
-from .tree_entries import RootsEntry
+from .tree_entries import RootsEntry, build_entry
 from .utils import dict_to_bin, get_domains
 
 
@@ -51,8 +51,22 @@ class PresenceProof(BaseProof):
         self.chain = None
         super().__init__(raw)
 
+    def parse(self, raw):
+        dict_ = bin_to_dict(raw)
+        if len(dict_) != 2:  # FIXME(PSz): other parse()s need that as well.
+            raise EEPKIParseError("#keys != 2")
+        if MsgFields.CHAIN not in dict_:
+            raise EEPKIParseError("CHAIN not provided")
+        self.chain = dict_[MsgFields.CHAIN]
+        del dict_[MsgFields.CHAIN]
+        # Get entry
+        type_, raw = dict_.popitem()
+        self.entry = build_entry(type_, raw)
+
     def pack(self):
         dict_ = {}
+        dict_[self.entry.get_type()] = self.entry
+        dict_[MsgFields.CHAIN] = self.chain
         return dict_to_bin(dict_)
 
     @classmethod
@@ -100,6 +114,38 @@ class AbsenceProof(BaseProof):
         self.proof1 = None
         self.proof2 = None
         super().__init__(raw)
+
+    def parse(self, raw):
+        dict_ = bin_to_dict(raw)
+        if len(dict_) != 2:
+            raise EEPKIParseError("#keys != 2")
+        if MsgFields.PROOF1 not in dict_:
+            raise EEPKIParseError("PROOF1 not provided")
+        if dict_[MsgFields.PROOF1]:
+            self.proof1 = PresenceProof(dict_[MsgFields.PROOF1])
+        if MsgFields.PROOF2 not in dict_:
+            raise EEPKIParseError("PROOF2 not provided")
+        if dict_[MsgFields.PROOF2]:
+            self.proof2 = PresenceProof(dict_[MsgFields.PROOF2])
+
+    def pack(self):
+        dict_ = {}
+        if self.proof1:
+            dict_[MsgFields.PROOF1] = self.proof1.pack()
+        else:
+            dict_[MsgFields.PROOF1] = None
+        if self.proof2:
+            dict_[MsgFields.PROOF2] = self.proof2.pack()
+        else:
+            dict_[MsgFields.PROOF2] = None
+        return dict_to_bin(dict_)
+
+    @classmethod
+    def from_values(cls, proof1, proof2):
+        inst = cls()
+        inst.proof1 = proof1
+        inst.proof2 = proof2
+        return inst
 
     def get_root(self):
         if self.proof1 and self.proof2:
@@ -175,20 +221,6 @@ class AbsenceProof(BaseProof):
                 raise EEPKIError("Different direciton on the coverged paths")
             int_len -= 1
         return True
-
-    def parse(self, raw):
-        pass
-
-    def pack(self):
-        dict_ = {} 
-        return dict_to_bin(dict_)
-
-    @classmethod
-    def from_values(cls, proof1, proof2):
-        inst = cls()
-        inst.proof1 = proof1
-        inst.proof2 = proof2
-        return inst
 
     def __str__(self):
         return "Proof1: %s\nProof2: %s" % (self.proof1, self.proof2)
