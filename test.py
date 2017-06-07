@@ -55,7 +55,19 @@ def verifier(msc, scp, trc, domain_name, sec_lvl=SecLevel.MEDIUM):
         print("Unknown res: %s" % res)
 
 def test_pack_parse(msc, scp):
-    msce = MSCEntry.from_values(msc)
+    print("testing parsing/packing")
+    entry = MSCEntry.from_values(msc)
+    assert entry.is_equal(MSCEntry(entry.pack()))
+    entry = SCPEntry.from_values(scp)
+    assert entry.is_equal(SCPEntry(entry.pack()))
+    entry = CertificateEntry.from_values(msc)
+    assert entry.is_equal(CertificateEntry(entry.pack()))
+    entry = RootsEntry.from_values(b"test1", b"testtwo")
+    assert entry.is_equal(RootsEntry(entry.pack()))
+    entry = PolicyEntry.from_values(scp.domain_name, scp)
+    assert entry.is_equal(PolicyEntry(entry.pack()))
+    entry = PolicyEntry.from_values(scp.domain_name)
+    assert entry.is_equal(PolicyEntry(entry.pack()))
 
 
 if __name__ == "__main__":

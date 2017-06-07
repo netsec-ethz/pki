@@ -57,6 +57,12 @@ class RevocationEntry(TreeEntry):
         self.rev = None
         super().__init__(raw)
 
+    def parse(self, raw):
+        dict_ = bin_to_dict(raw)
+        if not MsgFields.REV in dict_:
+            raise EEPKIParseError("No REV entry")
+        self.rev = Revocation(dict_[MsgFields.REV])
+
     def pack(self):
         res = {}
         res[MsgFields.REV] = self.rev.pack()
@@ -210,7 +216,7 @@ class PolicyEntry(TreeEntry):
         dict_ = bin_to_dict(raw)
         if not MsgFields.DNAME in dict_:
             raise EEPKIParseError("No DNAME entry")
-        self.domain_name = dict_[MsgFields.POLICY_ROOT]
+        self.domain_name = dict_[MsgFields.DNAME]
         if not MsgFields.SCP in dict_:
             raise EEPKIParseError("No SCP entry")
         if dict_[MsgFields.SCP]:
