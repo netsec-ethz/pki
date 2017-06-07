@@ -15,8 +15,8 @@ from functools import total_ordering
 
 from merkle import hash_function
 
-from .utils import dict_to_cbor
-from .defines import MsgFields
+from .utils import cbor_to_dict, dict_to_cbor
+from .defines import EEPKIParseError, MsgFields
 
 @total_ordering
 class TreeEntry(object):
@@ -29,7 +29,7 @@ class TreeEntry(object):
         raise NotImplementedError
 
     def pack(self):  # Output is used for building an actual tree
-        return {MsgFields.TYPE: self.TYPE}
+        raise NotImplementedError
 
     def get_hash(self):
         return hash_function(self.pack()).digest()
@@ -46,8 +46,10 @@ class TreeEntry(object):
     def is_equal(self, other):
         return self.pack() == other.pack()
 
+    def get_type(self):
+        return self.TYPE
 
-# PSz: consider id as get_label() for entries of ConsistencyTree
+
 class RevocationEntry(TreeEntry):
     TYPE = MsgFields.REV
     def __init__(self, raw=None):
@@ -55,7 +57,7 @@ class RevocationEntry(TreeEntry):
         super().__init__(raw)
 
     def pack(self):
-        res = super().pack()
+        res = {}
         res[MsgFields.REV] = self.rev.pack()
         return dict_to_cbor(res)
 
@@ -72,8 +74,14 @@ class MSCEntry(TreeEntry):
         self.msc = None
         super().__init__(raw)
 
+    def parse(self, raw):
+        dict_ = cbor_to_dict(raw)
+        if not MsgFields.MSC in dict_:
+            raise EEPKIParseError("No MSC entry")
+        self.msc = MSC(dict_[MsgFields.MSC])
+
     def pack(self):
-        res = super().pack()
+        res = {}
         res[MsgFields.MSC] = self.msc.pack()
         return dict_to_cbor(res)
 
@@ -95,8 +103,18 @@ class CertificateEntry(TreeEntry):
         self.rev = None
         super().__init__(raw)
 
+    def parse(self, raw):
+        dict_ = cbor_to_dict(raw)
+        if not MsgFields.MSC in dict_:
+            raise EEPKIParseError("No MSC entry")
+        self.msc = MSC(dict_[MsgFields.MSC])
+        if not MsgFields.REV in dict_:
+            raise EEPKIParseError("No REV entry")
+        if dict_[MsgFields.REV]:
+            self.rev = Revocation(dict_[MsgFields.REV])
+
     def pack(self):
-        res = super().pack()
+        res = {}
         res[MsgFields.MSC] = self.msc.pack()
         if self.rev:
             res[MsgFields.REV] = self.rev.pack()
@@ -121,8 +139,14 @@ class SCPEntry(TreeEntry):
         self.scp = None
         super().__init__(raw)
 
+    def parse(self, raw):
+        dict_ = cbor_to_dict(raw)
+        if not MsgFields.SCP in dict_:
+            raise EEPKIParseError("No SCP entry")
+        self.scp = SCP(dict_[MsgFields.SCP])
+
     def pack(self):
-        res = super().pack()
+        res = {}
         res[MsgFields.SCP] = self.scp.pack()
         return dict_to_cbor(res)
 
@@ -143,8 +167,17 @@ class RootsEntry(TreeEntry):
         self.cert_tree_root = None
         super().__init__(raw)
 
+    def parse(self, raw):
+        dict_ = cbor_to_dict(raw)
+        if not MsgFields.POLICY_ROOT in dict_:
+            raise EEPKIParseError("No POLICY_ROOT entry")
+        self.policy_tree_root = dict_[MsgFields.POLICY_ROOT]
+        if not MsgFields.CERT_ROOT in dict_:
+            raise EEPKIParseError("No CERT_ROOT entry")
+        self.cert_tree_root = dict_[MsgFields.CERT_ROOT]
+
     def pack(self):
-        res = super().pack()
+        res = {}
         res[MsgFields.POLICY_ROOT] = self.policy_tree_root
         res[MsgFields.CERT_ROOT] = self.cert_tree_root
         return dict_to_cbor(res)
@@ -169,16 +202,33 @@ class PolicyEntry(TreeEntry):
         self.domain_name = None
         self.scp = None
         self.subtree = None
+        self.subroot = None  # Only for parse()/pack() if subtree is None
         super().__init__(raw)
 
+    def parse(self, raw):
+        dict_ = cbor_to_dict(raw)
+        if not MsgFields.DNAME in dict_:
+            raise EEPKIParseError("No DNAME entry")
+        self.domain_name = dict_[MsgFields.POLICY_ROOT]
+        if not MsgFields.SCP in dict_:
+            raise EEPKIParseError("No SCP entry")
+        if dict_[MsgFields.SCP]:
+            self.scp = SCP(dict_[MsgFields.SCP])
+        if not MsgFields.SUBROOT in dict_:
+            raise EEPKIParseError("No SUBROOT entry")
+        self.subroot = dict_[MsgFields.SUBROOT]
+
     def pack(self):
-        res = super().pack()
+        res = {}
+        res[MsgFields.DNAME] = self.domain_name
         if self.scp:
             res[MsgFields.SCP] = self.scp.pack()
         else:
             res[MsgFields.SCP] = None
         if self.subtree:
             res[MsgFields.SUBROOT] = self.subtree.get_root()
+        elif self.subroot:
+            res[MsgFields.SUBROOT] = self.subroot
         else:
             res[MsgFields.SUBROOT] = None
         return dict_to_cbor(res)

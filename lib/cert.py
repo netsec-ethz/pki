@@ -120,7 +120,7 @@ class SCP(EECert):
     Subject certificate policy.
     """
     def __init__(self, pem):
-        self.policy = b""
+        self.policy = None
         super().__init__(pem)
 
     def parse(self, pem):
@@ -153,9 +153,9 @@ class Revocation(object):
     """
     Class for revocation messages.
     """
-    def __init__(self, raw):
-        self.raw = raw
-        self.parse(raw)
+    def __init__(self, raw=None):
+        if raw:
+            self.parse(raw)
 
     def parse(self, pem):
         raise NotImplementedError

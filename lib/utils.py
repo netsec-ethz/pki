@@ -17,6 +17,9 @@ import cbor
 def dict_to_cbor(dict_):
     return cbor.dumps(dict_, sort_keys=True)
 
+def cbor_to_dict(raw):
+    return cbor.loads(raw)
+
 def get_domains(domain_name):
     """
     For a domain name returns sorted list of all domain names included in it.

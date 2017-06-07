@@ -25,6 +25,9 @@ class EEPKIError(Exception):
     pass
 
 
+class EEPKIParseError(EEPKIError):
+    pass
+
 class SecLevel(object):
     LOW = 0
     MEDIUM = 1
@@ -101,6 +104,7 @@ class MsgFields(object):
     MSC = "msc"
     SCP = "scp"
     CERT = "cert"
+    DNAME = "dname"
     POLICY = "policy"
     ROOTS = "roots"
     POLICY_ROOT = "policy_root"
