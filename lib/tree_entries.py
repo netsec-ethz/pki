@@ -27,10 +27,13 @@ class TreeEntry(object):
             self.parse(raw)
 
     def parse(self, raw):
-        raise NotImplementedError
+        dict_ = bin_to_obj(raw)
+        if MsgFields.TYPE not in dict_ or dict_[MsgFields.TYPE] != self.TYPE:
+            raise EEPKIParseError("No or incorrect type")
+        return dict_
 
     def pack(self):  # Output is used for building an actual tree
-        raise NotImplementedError
+        return {MsgFields.TYPE: self.TYPE}
 
     def get_hash(self):
         return hash_function(self.pack()).digest()
@@ -58,13 +61,13 @@ class RevocationEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_obj(raw)
+        dict_ = super().parse(raw)
         if not MsgFields.REV in dict_:
             raise EEPKIParseError("No REV entry")
         self.rev = Revocation(dict_[MsgFields.REV])
 
     def pack(self):
-        dict_ = {}
+        dict_ = super().pack()
         dict_[MsgFields.REV] = self.rev.pack()
         return obj_to_bin(dict_)
 
@@ -82,13 +85,13 @@ class MSCEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_obj(raw)
+        dict_ = super().parse(raw)
         if not MsgFields.MSC in dict_:
             raise EEPKIParseError("No MSC entry")
         self.msc = MSC(dict_[MsgFields.MSC])
 
     def pack(self):
-        dict_ = {}
+        dict_ = super().pack()
         dict_[MsgFields.MSC] = self.msc.pack()
         return obj_to_bin(dict_)
 
@@ -111,7 +114,7 @@ class CertificateEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_obj(raw)
+        dict_ = super().parse(raw)
         if not MsgFields.MSC in dict_:
             raise EEPKIParseError("No MSC entry")
         self.msc = MSC(dict_[MsgFields.MSC])
@@ -121,7 +124,7 @@ class CertificateEntry(TreeEntry):
             self.rev = Revocation(dict_[MsgFields.REV])
 
     def pack(self):
-        dict_ = {}
+        dict_ = super().pack()
         dict_[MsgFields.MSC] = self.msc.pack()
         if self.rev:
             dict_[MsgFields.REV] = self.rev.pack()
@@ -147,13 +150,13 @@ class SCPEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_obj(raw)
+        dict_ = super().parse(raw)
         if not MsgFields.SCP in dict_:
             raise EEPKIParseError("No SCP entry")
         self.scp = SCP(dict_[MsgFields.SCP])
 
     def pack(self):
-        dict_ = {}
+        dict_ = super().pack()
         dict_[MsgFields.SCP] = self.scp.pack()
         return obj_to_bin(dict_)
 
@@ -175,7 +178,7 @@ class RootsEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_obj(raw)
+        dict_ = super().parse(raw)
         if not MsgFields.POLICY_ROOT in dict_:
             raise EEPKIParseError("No POLICY_ROOT entry")
         self.policy_tree_root = dict_[MsgFields.POLICY_ROOT]
@@ -184,7 +187,7 @@ class RootsEntry(TreeEntry):
         self.cert_tree_root = dict_[MsgFields.CERT_ROOT]
 
     def pack(self):
-        dict_ = {}
+        dict_ = super().pack()
         dict_[MsgFields.POLICY_ROOT] = self.policy_tree_root
         dict_[MsgFields.CERT_ROOT] = self.cert_tree_root
         return obj_to_bin(dict_)
@@ -213,7 +216,7 @@ class PolicyEntry(TreeEntry):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_obj(raw)
+        dict_ = super().parse(raw)
         if not MsgFields.DNAME in dict_:
             raise EEPKIParseError("No DNAME entry")
         self.domain_name = dict_[MsgFields.DNAME]
@@ -226,7 +229,7 @@ class PolicyEntry(TreeEntry):
         self.subroot = dict_[MsgFields.SUBROOT]
 
     def pack(self):
-        dict_ = {}
+        dict_ = super().pack()
         dict_[MsgFields.DNAME] = self.domain_name
         if self.scp:
             dict_[MsgFields.SCP] = self.scp.pack()
@@ -254,8 +257,12 @@ class PolicyEntry(TreeEntry):
         return self.domain_name
 
 
-def build_entry(type_, raw):
+def build_entry(raw):
     classes = [RevocationEntry, MSCEntry, CertificateEntry, SCPEntry, RootsEntry, PolicyEntry]
+    dict_ = bin_to_obj(raw)
+    if MsgFields.TYPE not in dict_:
+        raise EEPKIParseError("Type not found")
+    type_ = dict_[MsgFields.TYPE]
     for cls in classes:
         if cls.TYPE == type_:
             return cls(raw)

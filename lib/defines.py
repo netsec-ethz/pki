@@ -106,6 +106,7 @@ class MsgFields(object):
     CERT = "cert"
     DNAME = "dname"
     POLICY = "policy"
+    ENTRY = "entry"
     REV_ENTRY = "rev_entry"
     MSC_ENTRY = "msc_entry"
     SCP_ENTRY = "scp_entry"

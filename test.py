@@ -24,6 +24,7 @@ from pki.log.log import Log
 from pki.lib.verifier import verify
 from pki.lib.x509 import certs_to_pem, pem_to_certs
 from pki.lib.tree_entries import *
+from pki.lib.tree_proofs import EEPKIProof
 
 # SCION
 from lib.crypto.trc import TRC
@@ -58,16 +59,22 @@ def test_pack_parse(msc, scp):
     print("testing parsing/packing")
     entry = MSCEntry.from_values(msc)
     assert entry.is_equal(MSCEntry(entry.pack()))
+    assert entry.is_equal(build_entry(entry.pack()))
     entry = SCPEntry.from_values(scp)
     assert entry.is_equal(SCPEntry(entry.pack()))
+    assert entry.is_equal(build_entry(entry.pack()))
     entry = CertificateEntry.from_values(msc)
     assert entry.is_equal(CertificateEntry(entry.pack()))
+    assert entry.is_equal(build_entry(entry.pack()))
     entry = RootsEntry.from_values(b"test1", b"testtwo")
     assert entry.is_equal(RootsEntry(entry.pack()))
+    assert entry.is_equal(build_entry(entry.pack()))
     entry = PolicyEntry.from_values(scp.domain_name, scp)
     assert entry.is_equal(PolicyEntry(entry.pack()))
+    assert entry.is_equal(build_entry(entry.pack()))
     entry = PolicyEntry.from_values(scp.domain_name)
     assert entry.is_equal(PolicyEntry(entry.pack()))
+    assert entry.is_equal(build_entry(entry.pack()))
 
 
 if __name__ == "__main__":
@@ -180,3 +187,6 @@ for v in vectors:
         res = False
     if res != v[0]:
         print("Validation incorrect: ", v, res)
+    # Test proof packing/parsing
+    # print(proof.pack())
+    # EEPKIProof(proof.pack())

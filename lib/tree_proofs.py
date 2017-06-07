@@ -15,9 +15,9 @@ from base64 import b64decode, b64encode
 
 from merkle import check_chain, MerkleError
 
-from .defines import EEPKIError, MsgFields
+from .defines import EEPKIError, EEPKIParseError, MsgFields
 from .tree_entries import RootsEntry, build_entry
-from .utils import obj_to_bin, get_domains
+from .utils import bin_to_obj, obj_to_bin, get_domains
 
 
 class BaseProof(object):
@@ -27,11 +27,15 @@ class BaseProof(object):
         if raw is not None:
             self.parse(raw)
 
+    # FIXME(PSz): introduce some base class, parse() and pack() are the same as in entries
     def parse(self, raw):
-        raise NotImplementedError
+        dict_ = bin_to_obj(raw)
+        if MsgFields.TYPE not in dict_ or dict_[MsgFields.TYPE] != self.TYPE:
+            raise EEPKIParseError("No or incorrect type")
+        return dict_
 
     def pack(self):
-        raise NotImplementedError
+        return {MsgFields.TYPE: self.TYPE}
 
     def get_root(self):
         raise NotImplementedError
@@ -52,20 +56,20 @@ class PresenceProof(BaseProof):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_obj(raw)
-        if len(dict_) != 2:  # FIXME(PSz): other parse()s need that as well.
-            raise EEPKIParseError("#keys != 2")
+        dict_ = super().parse(raw)
+        if len(dict_) != 3:  # FIXME(PSz): other parse()s need that as well.
+            raise EEPKIParseError("#keys != 3")
         if MsgFields.CHAIN not in dict_:
             raise EEPKIParseError("CHAIN not provided")
         self.chain = dict_[MsgFields.CHAIN]
         del dict_[MsgFields.CHAIN]
         # Get entry
         type_, raw = dict_.popitem()
-        self.entry = build_entry(type_, raw)
+        self.entry = build_entry(raw)
 
     def pack(self):
-        dict_ = {}
-        dict_[self.entry.get_type()] = self.entry
+        dict_ = super().pack()
+        dict_[self.entry.get_type()] = self.entry.pack()
         dict_[MsgFields.CHAIN] = self.chain
         return obj_to_bin(dict_)
 
@@ -116,8 +120,9 @@ class AbsenceProof(BaseProof):
         super().__init__(raw)
 
     def parse(self, raw):
-        dict_ = bin_to_obj(raw)
-        if len(dict_) != 2:
+        dict_ = super().parse(raw)
+        print(dict_)
+        if len(dict_) != 3:
             raise EEPKIParseError("#keys != 2")
         if MsgFields.PROOF1 not in dict_:
             raise EEPKIParseError("PROOF1 not provided")
@@ -129,7 +134,7 @@ class AbsenceProof(BaseProof):
             self.proof2 = PresenceProof(dict_[MsgFields.PROOF2])
 
     def pack(self):
-        dict_ = {}
+        dict_ = super().pack()
         if self.proof1:
             dict_[MsgFields.PROOF1] = self.proof1.pack()
         else:
@@ -325,7 +330,7 @@ class EEPKIProof(BaseProof):
         if list_[1]:
             self.policy_proof = PolicyProof(list_[1])
         tmp = list_[2]
-        if MsgFields.ENTRY in bin_to_obj(tmp)
+        if MsgFields.ENTRY in bin_to_obj(tmp):
             self.cert_proof = PresenceProof(tmp)
         else:
             self.cert_proof = AbsenceProof(tmp)
@@ -399,3 +404,6 @@ class EEPKIProof(BaseProof):
         res.append(str(self.policy_proof))
         res.append(str(self.cert_proof))
         return "\n".join(res)
+
+def make_proof(raw):
+    pass
