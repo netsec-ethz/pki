@@ -255,7 +255,7 @@ class PolicyEntry(TreeEntry):
 
 
 def build_entry(type_, raw):
-    classes = [RevocationEntry, MSCEntry CertificateEntry, SCPEntry, RootsEntry, PolicyEntry]
+    classes = [RevocationEntry, MSCEntry, CertificateEntry, SCPEntry, RootsEntry, PolicyEntry]
     for cls in classes:
         if cls.TYPE == type_:
             return cls(raw)
