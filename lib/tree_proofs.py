@@ -21,7 +21,7 @@ from .utils import dict_to_bin, get_domains
 
 
 class BaseProof(object):
-    TYPE = None
+    TYPE = "SHOULDN'T SEE THAT!!!"
     def __init__(self, raw=None):
         self.raw = raw
         if raw is not None:
@@ -31,7 +31,7 @@ class BaseProof(object):
         raise NotImplementedError
 
     def pack(self):
-        return {MsgFields.TYPE: self.TYPE}
+        raise NotImplementedError
 
     def get_root(self):
         raise NotImplementedError
@@ -39,6 +39,9 @@ class BaseProof(object):
     def validate(self, label, root):
         if root != self.get_root():
             raise EEPKIError("External root mismatch")
+
+    def get_type(self):
+        return self.TYPE
 
 
 class PresenceProof(BaseProof):

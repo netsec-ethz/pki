@@ -23,6 +23,7 @@ from pki.lib.cert import MSC, SCP
 from pki.log.log import Log
 from pki.lib.verifier import verify
 from pki.lib.x509 import certs_to_pem, pem_to_certs
+from pki.lib.tree_entries import *
 
 # SCION
 from lib.crypto.trc import TRC
@@ -54,7 +55,7 @@ def verifier(msc, scp, trc, domain_name, sec_lvl=SecLevel.MEDIUM):
         print("Unknown res: %s" % res)
 
 def test_pack_parse(msc, scp):
-    pass
+    msce = MSCEntry.from_values(msc)
 
 
 if __name__ == "__main__":
@@ -75,8 +76,10 @@ if __name__ == "__main__":
 
     with open(sys.argv[3], "r") as f:
         trc = TRC.from_raw(f.read())
-
+    # Verify MSC
     verifier(msc, scp, trc, "a.com")
+    # Test basic packing and parsing
+    test_pack_parse(msc, scp)
 
 
 # Test Trees

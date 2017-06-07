@@ -15,8 +15,9 @@ from functools import total_ordering
 
 from merkle import hash_function
 
-from .utils import bin_to_dict, dict_to_bin
+from .cert import MSC, Revocation, SCP
 from .defines import EEPKIParseError, MsgFields
+from .utils import bin_to_dict, dict_to_bin
 
 @total_ordering
 class TreeEntry(object):
