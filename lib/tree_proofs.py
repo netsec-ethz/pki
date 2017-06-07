@@ -17,7 +17,7 @@ from merkle import check_chain, MerkleError
 
 from .defines import EEPKIError, MsgFields
 from .tree_entries import RootsEntry
-from .utils import dict_to_cbor, get_domains
+from .utils import dict_to_bin, get_domains
 
 
 class BaseProof(object):
@@ -51,7 +51,7 @@ class PresenceProof(BaseProof):
     def pack(self):
         tmp = super().__pack__()
         # TODO(PSz): other fields + base64
-        return dict_to_cbor(tmp)
+        return dict_to_bin(tmp)
 
     @classmethod
     def from_values(cls, entry, chain):
@@ -179,7 +179,7 @@ class AbsenceProof(BaseProof):
     def pack(self):
         tmp = super().__pack__()
         # TODO(PSz): other fields + base64
-        return dict_to_cbor(tmp)
+        return dict_to_bin(tmp)
 
     @classmethod
     def from_values(cls, proof1, proof2):
