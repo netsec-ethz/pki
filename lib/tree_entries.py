@@ -51,7 +51,7 @@ class TreeEntry(object):
 
 
 class RevocationEntry(TreeEntry):
-    TYPE = MsgFields.REV
+    TYPE = MsgFields.REV_ENTRY
     def __init__(self, raw=None):
         self.rev = None
         super().__init__(raw)
@@ -69,7 +69,7 @@ class RevocationEntry(TreeEntry):
 
 
 class MSCEntry(TreeEntry):
-    TYPE = MsgFields.MSC
+    TYPE = MsgFields.MSC_ENTRY
     def __init__(self, raw=None):
         self.msc = None
         super().__init__(raw)
@@ -97,7 +97,7 @@ class CertificateEntry(TreeEntry):
     Representation of a MSC and its revocation (optional). These entries build
     the CertificateTree.
     """
-    TYPE = MsgFields.CERT
+    TYPE = MsgFields.CERT_ENTRY
     def __init__(self, raw=None):
         self.msc = None
         self.rev = None
@@ -134,7 +134,7 @@ class CertificateEntry(TreeEntry):
 
 
 class SCPEntry(TreeEntry):
-    TYPE = MsgFields.SCP
+    TYPE = MsgFields.SCP_ENTRY
     def __init__(self, raw=None):
         self.scp = None
         super().__init__(raw)
@@ -161,7 +161,7 @@ class SCPEntry(TreeEntry):
 
 
 class RootsEntry(TreeEntry):
-    TYPE = MsgFields.ROOTS
+    TYPE = MsgFields.ROOTS_ENTRY
     def __init__(self, raw=None):
         self.policy_tree_root = None
         self.cert_tree_root = None
@@ -197,7 +197,7 @@ class PolicyEntry(TreeEntry):
     """
     Representation of an SCP and its subtree. These entries build the PolicyTree.
     """
-    TYPE = MsgFields.POLICY
+    TYPE = MsgFields.POLICY_ENTRY
     def __init__(self, raw=None):
         self.domain_name = None
         self.scp = None
