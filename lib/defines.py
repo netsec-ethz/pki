@@ -99,14 +99,16 @@ DEFAULT_POLICY = {
 
 
 class MsgFields(object):
+    #FIXME(PSz): getting too big, split it.
+    # Generic
     TYPE = "type"
+    ENTRY = "entry"
     REV = "rev"
     MSC = "msc"
     SCP = "scp"
     CERT = "cert"
     DNAME = "dname"
-    POLICY = "policy"
-    ENTRY = "entry"
+    # lib/tree_entries.py
     REV_ENTRY = "rev_entry"
     MSC_ENTRY = "msc_entry"
     SCP_ENTRY = "scp_entry"
@@ -116,6 +118,7 @@ class MsgFields(object):
     POLICY_ROOT = "policy_root"
     CERT_ROOT = "cert_root"
     SUBROOT = "subroot"
+    # lib/tree_proofs.py
     CHAIN = "chain"
     ABSENCE_PROOF = "absence_proof"
     PROOF1 = "proof1"
@@ -123,3 +126,20 @@ class MsgFields(object):
     PRESENCE_PROOF = "presence_proof"
     POLICY_PROOF = "policy_proof"
     EEPKI_PROOF = "eepki_proof"
+    # Requests/Responses
+    SIGNED_ROOT = "signed_root"
+    ERROR_MSG = "error_msg"
+    ADD_MSG = "add_msg"
+    ACCEPT_MSG = "accept_msg"
+    GET_UPDATE_MSG = "get_update_msg"
+    UPDATE_MSG = "update_msg"
+    PROOF_MSG = "proof_msg"
+    # Message fields
+    SIGNATURE = "signature"
+    DESCRIPTION = "description"
+    TIMESTAMP = "timestamp"
+    HASH = "hash"
+    UPDATE_NO = "update_no"
+    ENTRIES = "entries"
+    MSC_LABEL = "msc_label"
+    ROOT = "root"  # merge with SUBROOT?

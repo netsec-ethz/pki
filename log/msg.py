@@ -1,0 +1,272 @@
+# Copyright 2017 ETH Zurich
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import time
+
+from pki.lib.defines import EEPKIParseError, MsgFields as MF
+from pki.lib.utils import bin_to_obj, obj_to_bin
+from pki.lib.tree_entries import build_entry
+from pki.lib.tree_proofs import EEPKIProof
+
+class Message(object):
+    TYPE = "SHOULDN'T SEE THAT!!!"
+    def __init__(self, raw=None):
+        if raw:
+            self.parse(raw)
+
+    def parse(self, raw):
+        dict_ = bin_to_obj(raw)
+        if MF.TYPE not in dict_ or dict_[MF.TYPE] != self.TYPE:
+            raise EEPKIParseError("No or incorrect type")
+        return dict_
+
+    def pack(self):
+        return {MF.TYPE: self.TYPE}
+
+    def validate(self, public_key):
+        raise NotImplementedError
+
+    def sign(self, private_key):
+        raise NotImplementedError
+
+
+class ErrorMsg(Message):
+    TYPE = MF.ERROR_MSG
+    def __init__(self, raw=None):
+        self.description = None
+        super().__init__(raw)
+
+    def parse(self, raw):
+        dict_ = super().parse(raw)
+        if MF.DESCRIPTION not in dict_ or not dict_[MF.DESCRIPTION]:
+            raise EEPKIParseError("Incomplete message")
+        self.description = dict_[MF.DESCRIPTION]
+
+    def pack(self):
+        dict_ = super().pack()
+        dict_[MF.DESCRIPTION] = self.description
+        return obj_to_bin(dict_)
+
+    @classmethod
+    def from_values(desc):
+        inst = cls()
+        inst.description = desc
+        return inst
+
+
+class AddMsg(Message):
+    TYPE = MF.ADD_MSG
+    def __init__(self, raw=None):
+        self.entry = None
+        super().__init__(raw)
+
+    def parse(self, raw):
+        dict_ = super().parse(raw)
+        if MF.ENTRY not in dict_ or not dict_[MF.ENTRY]:
+            raise EEPKIParseError("Incomplete message")
+        self.entry = build_entry(dict_[MF.ENTRY])
+
+    def pack(self):
+        dict_ = super().pack()
+        dict_[MF.ENTRY] = self.entry.pack()
+        return obj_to_bin(dict_)
+
+    @classmethod
+    def from_values(entry):
+        inst = cls()
+        inst.entry = entry
+        return inst
+
+
+class AcceptMsg(Message):
+    TYPE = MF.ACCEPT_MSG
+    def __init__(self, raw=None):
+        self.hash = None
+        self.timestamp = None
+        self.signature = None
+        super().__init__(raw)
+
+    def parse(self, raw):
+        dict_ = super().parse(raw)
+        if MF.HASH not in dict_ or not dict_[MF.HASH]:
+            raise EEPKIParseError("Incomplete message")
+        self.hash = dict_[MF.HASH]
+        if MF.TIMESTAMP not in dict_ or not dict_[MF.TIMESTAMP]:
+            raise EEPKIParseError("Incomplete message")
+        self.timestamp = dict_[MF.TIMESTAMP]
+        if MF.SIGNATURE not in dict_ or not dict_[MF.SIGNATURE]:
+            raise EEPKIParseError("Incomplete message")
+        self.signature = dict_[MF.SIGNATURE]
+
+    def pack(self):
+        dict_ = super().pack()
+        dict_[MF.HASH] = self.hash
+        dict_[MF.TIMESTAMP] = self.timestamp
+        dict_[MF.SIGNATURE] = self.signature
+        return obj_to_bin(dict_)
+
+    def validate(self, entry, public_key):
+        if not self.hash or not self.timestamp or not self.signature:
+            raise EEPKIParseError("Incomplete message")
+        raise NotImplementedError
+
+    def sign(self, private_key):
+        self.timestamp = int(time.time())
+        # sign here
+        raise NotImplementedError
+
+    @classmethod
+    def from_values(hash_):
+        inst = cls()
+        self.hash = hash_
+        return inst
+
+
+class UpdateMsg(Message):
+    """
+    Used for querying and returning updates.
+    When queried self.entries is empty.
+    """
+    TYPE = MF.UPDATE_MSG
+    def __init__(self, raw=None):
+        self.update_no = None
+        self entries = None
+        super().__init__(raw)
+
+    def parse(self, raw):
+        dict_ = super().parse(raw)
+        if MF.UPDATE_NO not in dict_ or not dict_[MF.UPDATE_NO]:
+            raise EEPKIParseError("Incomplete message")
+        self.update_no = dict_[MF.UPDATE_NO]
+        if MF.ENTRIES not in dict_:
+            raise EEPKIParseError("Incomplete message")
+        for raw_entry in dict_[MF.ENTRIES]:
+            self.entries.append(build_entry(raw_entry))
+
+    def pack(self):
+        dict_ = super().pack()
+        res = []
+        for entry in self.entries:
+            tmp.append(entry.pack())
+        dict_[MF.ENTRIES] = res
+        return obj_to_bin(dict_)
+
+    @classmethod
+    def from_values(update_no, entries=[]):
+        inst = cls()
+        inst.update_no = update_no
+        inst.entries = entries
+        return inst
+
+
+class ProofMsg(Message):
+    """
+    Used for querying and returning proofs.
+    When queried self.proof is None.
+    """
+    TYPE = MF.PROOF_MSG
+    def __init__(self, raw=None):
+        self.domain_name = None
+        self.msc_label = None
+        self.eepki_proof = None
+        super().__init__(raw)
+
+    def parse(self, raw):
+        dict_ = super().parse(raw)
+        if MF.DNAME not in dict_ or not dict_[MF.DNAME]:
+            raise EEPKIParseError("Incomplete message")
+        self.domain_name = dict_[MF.DNAME]
+        if MF.MSC_LABEL not in dict_:
+            raise EEPKIParseError("Incomplete message")
+        self.msc_label = dict_[MF.MSC_LABEL]
+        if MF.EEPKI_PROOF not in dict_:
+            raise EEPKIParseError("Incomplete message")
+        if dict_[MF.EEPKI_PROOF]:
+            self.eepki_proof = EEPKIProof(dict_[MF.EEPKI_PROOF])
+
+    def pack(self):
+        dict_ = super().pack()
+        dict_[MF.DNAME] = self.domain_name
+        dict_[MF.MSC_LABEL] = self.msc_label
+        if self.eeepki_proof:
+            dict_[MF.EEPKI_PROOF] = self.eepki_proof.pack()
+        else:
+            dict_[MF.EEPKI_PROOF] = None
+        return obj_to_bin(dict_)
+
+    @classmethod
+    def from_values(domain_name, msc_label=None, proof=None):
+        inst = cls()
+        inst.domain_name = domain_name
+        inst.msc_label = msc_label
+        inst.eepki_proof = proof
+        return inst
+
+
+class SignedRoot(Message):
+    """
+    Used for querying and returning signed roots.
+    """
+    TYPE = MF.SIGNED_ROOT
+    def __init__(self, raw=None):
+        self.root = None
+        self.timestamp = None
+        self.entries_no = None
+        self.signature = None
+        super().__init__(raw)
+
+    def parse(self, raw):
+        dict_ = super().parse(raw)
+        if MF.ROOT in dict_:
+            self.root = dict_[MF.ROOT]
+        if MF.TIMESTAMP in dict_:
+            self.timestamp = dict_[MF.TIMESTAMP]
+        if MF.ENTRIES_NO in dict_:
+            self.entries_no = dict_[MF.ENTRIES_NO]
+        if MF.SIGNATURE in dict_:
+            self.signature = dict_[MF.SIGNATURE]
+
+    def pack(self):
+        dict_ = super().pack()
+        dict_[MF.ROOT] = self.root
+        dict_[MF.TIMESTAMP] = self.timestamp
+        dict_[MF.ENTRIES_NO] = self.entries_no
+        dict_[MF.SIGNATURE] = self.signature
+        return obj_to_bin(dict_)
+
+    @classmethod
+    def from_values(root, entries_no):
+        inst = cls()
+        inst.root = root
+        inst.entries_no = entries_no
+        return inst
+
+    def validate(self, public_key):
+        raise NotImplementedError
+
+    def sign(self, private_key):
+        if not self.timestamp:
+            self.timestamp = int(time.time())
+        raise NotImplementedError
+
+
+def build_msg(raw):
+    classes = [ErrorMsg, AddMsg, AcceptMsg, UpdateMsg, ProofMsg, SignedRoot]
+    dict_ = bin_to_obj(raw)
+    if MF.TYPE not in dict_:
+        raise EEPKIParseError("Type not found")
+    type_ = dict_[MF.TYPE]
+    for cls in classes:
+        if cls.TYPE == type_:
+            return cls(raw)
+    raise EEPKIParseError("Class of type %s not found" % type_)
