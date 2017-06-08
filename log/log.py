@@ -78,6 +78,12 @@ class Log(object):
     def get_root(self):
         return self.cons_tree.get_root()
 
+    def sign_root(self):
+        pass
+
+    def get_signed_root(self):
+        pass
+
     def get_proof(self, scp_label, msc_label=None):
         policy_proof = self.policy_tree.get_proof(scp_label)
         cert_proof = None
@@ -87,3 +93,6 @@ class Log(object):
         last_idx = len(self.cons_tree.entries) - 1
         cons_proof = self.cons_tree.get_proof_idx(last_idx)
         return EEPKIProof.from_values(cons_proof, policy_proof, cert_proof)
+
+    def run(self):
+        pass
