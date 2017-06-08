@@ -13,6 +13,7 @@
 # limitations under the License.
 import logging
 
+from pki.lib.cert import MSC, SCP
 from pki.lib.trees import  CertificateTree, ConsistencyTree, PolicyTree
 from pki.lib.tree_entries import (
     CertificateEntry,
@@ -26,11 +27,25 @@ from pki.lib.tree_proofs import EEPKIProof
 
 
 class Log(object):
-    def __init__(self): #, trc, log_id, db_path, key_path=None):
+    def __init__(self, entries=[]): #, trc, log_id, db_path, key_path=None):
         self.cons_tree = ConsistencyTree()
         self.policy_tree = PolicyTree()
         self.cert_tree = CertificateTree()
+        for entry in entries:
+            self.add(entry)
         self.build(add_re=False)  # Don't add RootsEntry when pre-loaded
+
+    def add(self, entry):
+        if isinstance(entry, MSC):
+            self.add_msc(entry)
+        elif isinstance(entry, SCP):
+            self.add_scp(entry)
+        elif isinstance(entry, Revocation):
+            self.add_rev(entry)
+        elif isinstance(entry, RootsEntry):
+            self.cons_tree.add(entry)
+        else:
+            raise EEPKIError("Cannot add %s" % entry)
 
     def build(self, add_re=True):
         self.policy_tree.build()

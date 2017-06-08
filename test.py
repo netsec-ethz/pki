@@ -145,12 +145,13 @@ log = Log()
 all_ = scps + mscs
 random.shuffle(all_)
 for e in all_:
-    if isinstance(e, MSC):
-        log.add_msc(e)
-    elif isinstance(e, SCP):
-        log.add_scp(e)
+    log.add(e)
     log.build()  # test building for each node
 log.build()
+# Check
+random.shuffle(all_)
+# Policy trees should be consistent
+assert log.policy_tree.get_root() == Log(all_).policy_tree.get_root()
 
 
 print("Testing proofs")
