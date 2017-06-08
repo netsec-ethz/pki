@@ -148,9 +148,8 @@ for e in all_:
     log.add(e)
     log.build()  # test building for each node
 log.build()
-# Check
-random.shuffle(all_)
 # Policy trees should be consistent
+random.shuffle(all_)
 assert log.policy_tree.get_root() == Log(all_).policy_tree.get_root()
 
 
