@@ -203,13 +203,13 @@ class AbsenceProof(BaseProof):
         return True
 
     def _sibling_proofs(self):
-        # TODO(PSz): this is tree specific. Check how merkle.py handles trees with
-        # len(leaves) != 2^x. It may be necessary to add id for proof{1,2} and tree length
-        # to check whether they are indeed siblings. With 2^x trees it can be asserted
-        # that chains lengths are the same.
-
+        len1 = len(self.proof1.chain)
+        len2 = len(self.proof2.chain)
+        diff = len1 - len2
+        if diff < 0:  # The first proof has to be at least as long as the second
+            raise EEPKIError("Proof1 shorter than proof2")
         # Minimum over chain lengths without 'SELF'
-        int_len = min(len(self.proof1.chain), len(self.proof2.chain)) - 1
+        int_len = min(len1, len2) - 1
         # Start from the top, to check number of the identitcal nodes (i.e., where paths
         # converge)
         while int_len >= 1:
@@ -223,6 +223,11 @@ class AbsenceProof(BaseProof):
             if self.proof1.chain[-int_len][1] != self.proof2.chain[-int_len][1]:
                 raise EEPKIError("Different direciton on the coverged paths")
             int_len -= 1
+        # If proof1 is longer, than all remaining nodes must have left siblings
+        while diff:
+            if self.proof1.chain[diff][1] != 'L':
+                raise EEPKIError("Proof1 is not next to proof2")
+            diff -= 1
         return True
 
     def __str__(self):
