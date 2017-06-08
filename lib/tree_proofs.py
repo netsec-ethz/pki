@@ -15,7 +15,7 @@ from base64 import b64decode, b64encode
 
 from merkle import check_chain, MerkleError
 
-from .defines import EEPKIError, EEPKIParseError, MsgFields
+from .defines import EEPKIError, EEPKIParseError, MsgFields as MF
 from .tree_entries import RootsEntry, build_entry
 from .utils import bin_to_obj, obj_to_bin, get_domains
 
@@ -30,12 +30,12 @@ class BaseProof(object):
     # FIXME(PSz): introduce some base class, parse() and pack() are the same as in entries
     def parse(self, raw):
         dict_ = bin_to_obj(raw)
-        if MsgFields.TYPE not in dict_ or dict_[MsgFields.TYPE] != self.TYPE:
+        if MF.TYPE not in dict_ or dict_[MF.TYPE] != self.TYPE:
             raise EEPKIParseError("No or incorrect type")
         return dict_
 
     def pack(self):
-        return {MsgFields.TYPE: self.TYPE}
+        return {MF.TYPE: self.TYPE}
 
     def get_root(self):
         raise NotImplementedError
@@ -49,7 +49,7 @@ class BaseProof(object):
 
 
 class PresenceProof(BaseProof):
-    TYPE = MsgFields.PRESENCE_PROOF
+    TYPE = MF.PRESENCE_PROOF
     def __init__(self, raw=None):
         self.entry = None
         self.chain = None
@@ -59,17 +59,17 @@ class PresenceProof(BaseProof):
         dict_ = super().parse(raw)
         if len(dict_) != 3:  # FIXME(PSz): other parse()s need that as well.
             raise EEPKIParseError("#keys != 3")
-        if MsgFields.CHAIN not in dict_:
+        if MF.CHAIN not in dict_:
             raise EEPKIParseError("CHAIN not provided")
-        self.chain = dict_[MsgFields.CHAIN]
-        if MsgFields.ENTRY not in dict_ or not dict_[MsgFields.ENTRY]:
+        self.chain = dict_[MF.CHAIN]
+        if MF.ENTRY not in dict_ or not dict_[MF.ENTRY]:
             raise EEPKIParseError("ENTRY not provided")
-        self.entry = build_entry(dict_[MsgFields.ENTRY])
+        self.entry = build_entry(dict_[MF.ENTRY])
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MsgFields.ENTRY] = self.entry.pack()
-        dict_[MsgFields.CHAIN] = self.chain
+        dict_[MF.ENTRY] = self.entry.pack()
+        dict_[MF.CHAIN] = self.chain
         return obj_to_bin(dict_)
 
     @classmethod
@@ -109,7 +109,7 @@ class PresenceProof(BaseProof):
 class AbsenceProof(BaseProof):
     """
     """
-    TYPE = MsgFields.ABSENCE_PROOF
+    TYPE = MF.ABSENCE_PROOF
     def __init__(self, raw=None):
         """
         Absence proof consists of two presence proofs.
@@ -122,25 +122,26 @@ class AbsenceProof(BaseProof):
         dict_ = super().parse(raw)
         if len(dict_) != 3:
             raise EEPKIParseError("#keys != 2")
-        if MsgFields.PROOF1 not in dict_:
+        if MF.PROOF1 not in dict_:
             raise EEPKIParseError("PROOF1 not provided")
-        if dict_[MsgFields.PROOF1]:
-            self.proof1 = PresenceProof(dict_[MsgFields.PROOF1])
-        if MsgFields.PROOF2 not in dict_:
+        if dict_[MF.PROOF1]:
+            self.proof1 = PresenceProof(dict_[MF.PROOF1])
+        if MF.PROOF2 not in dict_:
             raise EEPKIParseError("PROOF2 not provided")
-        if dict_[MsgFields.PROOF2]:
-            self.proof2 = PresenceProof(dict_[MsgFields.PROOF2])
+        if dict_[MF.PROOF2]:
+            self.proof2 = PresenceProof(dict_[MF.PROOF2])
 
     def pack(self):
+        # TODO(PSz): can be optimized as proof1 and proof2 have many nodes in common.
         dict_ = super().pack()
         if self.proof1:
-            dict_[MsgFields.PROOF1] = self.proof1.pack()
+            dict_[MF.PROOF1] = self.proof1.pack()
         else:
-            dict_[MsgFields.PROOF1] = None
+            dict_[MF.PROOF1] = None
         if self.proof2:
-            dict_[MsgFields.PROOF2] = self.proof2.pack()
+            dict_[MF.PROOF2] = self.proof2.pack()
         else:
-            dict_[MsgFields.PROOF2] = None
+            dict_[MF.PROOF2] = None
         return obj_to_bin(dict_)
 
     @classmethod
@@ -239,7 +240,7 @@ class PolicyProof(BaseProof):
     Complete proof of an SCP. It consists of either of n>0 presence proofs, or a
     single absence proof and N>=0 presence proofs. See... TODO(PSz)
     """
-    TYPE = MsgFields.POLICY_PROOF
+    TYPE = MF.POLICY_PROOF
     def __init__(self, raw=None):
         self.proofs = []
         super().__init__(raw)
@@ -312,7 +313,7 @@ class EEPKIProof(BaseProof):
     """
     Complete proof of MSC and SCP. For SPC's absence proofs an MSC proof can be None.
     """
-    TYPE = MsgFields.EEPKI_PROOF
+    TYPE = MF.EEPKI_PROOF
     def __init__(self, raw=None):
         self.cons_proof = None  # ConsistencyTree's proof
         self.policy_proof = None  # PolicyTree's proof
@@ -329,7 +330,7 @@ class EEPKIProof(BaseProof):
             self.policy_proof = PolicyProof(list_[1])
         tmp = list_[2]
         if tmp:
-            if MsgFields.ENTRY in bin_to_obj(tmp):
+            if MF.ENTRY in bin_to_obj(tmp):
                 self.cert_proof = PresenceProof(tmp)
             else:
                 self.cert_proof = AbsenceProof(tmp)
@@ -409,9 +410,9 @@ class EEPKIProof(BaseProof):
 def build_proof(raw):
     classes = [AbsenceProof, PresenceProof]
     dict_ = bin_to_obj(raw)
-    if MsgFields.TYPE not in dict_:
+    if MF.TYPE not in dict_:
         raise EEPKIParseError("Type not found")
-    type_ = dict_[MsgFields.TYPE]
+    type_ = dict_[MF.TYPE]
     for cls in classes:
         if cls.TYPE == type_:
             return cls(raw)

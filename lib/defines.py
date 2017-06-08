@@ -99,6 +99,7 @@ DEFAULT_POLICY = {
 
 
 class MsgFields(object):
+    #FIXME(PSz): getting too big, split it.
     # Generic
     TYPE = "type"
     ENTRY = "entry"
@@ -133,3 +134,8 @@ class MsgFields(object):
     GET_UPDATE_MSG = "get_update_msg"
     UPDATE_MSG = "update_msg"
     PROOF_MSG = "proof_msg"
+    # Message fields
+    SIGNATURE = "signature"
+    DESCRIPTION = "description"
+    TIMESTAMP = "timestamp"
+    HASH = "hash"
