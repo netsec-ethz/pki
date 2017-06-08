@@ -33,7 +33,7 @@ class Message(object):
     def pack(self):
         return {MF.TYPE: self.TYPE}
 
-    def verify(self, public_key):
+    def validate(self, public_key):
         raise NotImplementedError
 
     def sign(self, private_key):
@@ -78,7 +78,7 @@ class AddMsg(Message):
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.ENTRY] = self.entry.pack() 
+        dict_[MF.ENTRY] = self.entry.pack()
         return obj_to_bin(dict_)
 
     @classmethod
@@ -100,20 +100,24 @@ class AcceptMsg(Message):
         dict_ = super().parse(raw)
         if MF.HASH not in dict_ or not dict_[MF.HASH]:
             raise EEPKIParseError("Incomplete message")
-        self.hash = build_HASH(dict_[MF.HASH])
+        self.hash = dict_[MF.HASH]
         if MF.TIMESTAMP not in dict_ or not dict_[MF.TIMESTAMP]:
             raise EEPKIParseError("Incomplete message")
-        self.timestamp = build_TIMESTAMP(dict_[MF.TIMESTAMP])
+        self.timestamp = dict_[MF.TIMESTAMP]
         if MF.SIGNATURE not in dict_ or not dict_[MF.SIGNATURE]:
             raise EEPKIParseError("Incomplete message")
-        self.signature = build_SIGNATURE(dict_[MF.SIGNATURE])
+        self.signature = dict_[MF.SIGNATURE]
 
     def pack(self):
         dict_ = super().pack()
-        # entry
+        dict_[MF.HASH] = self.hash
+        dict_[MF.TIMESTAMP] = self.timestamp
+        dict_[MF.SIGNATURE] = self.signature
         return obj_to_bin(dict_)
 
-    def verify(self, public_key):
+    def validate(self, entry, public_key):
+        if not self.hash or not self.timestamp or not self.signature:
+            raise EEPKIParseError("Incomplete message")
         raise NotImplementedError
 
     def sign(self, private_key):
@@ -122,59 +126,97 @@ class AcceptMsg(Message):
         raise NotImplementedError
 
     @classmethod
-    def from_values(hash):
+    def from_values(hash_):
         inst = cls()
-        self.hash = hash
+        self.hash = hash_
         return inst
 
 
 class UpdateMsg(Message):
     """
-    Used for querying and returing updates.
+    Used for querying and returning updates.
     When queried self.entries is empty.
     """
     TYPE = MF.UPDATE_MSG
     def __init__(self, raw=None):
+        self.update_no = None
+        self entries = None
         super().__init__(raw)
 
     def parse(self, raw):
         dict_ = super().parse(raw)
+        if MF.UPDATE_NO not in dict_ or not dict_[MF.UPDATE_NO]:
+            raise EEPKIParseError("Incomplete message")
+        self.update_no = dict_[MF.UPDATE_NO]
+        if MF.ENTRIES not in dict_:
+            raise EEPKIParseError("Incomplete message")
+        for raw_entry in dict_[MF.ENTRIES]:
+            self.entries.append(build_entry(raw_entry))
 
     def pack(self):
         dict_ = super().pack()
-        # entry
+        res = []
+        for entry in self.entries:
+            tmp.append(entry.pack())
+        dict_[MF.ENTRIES] = res
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values():
+    def from_values(update_no, entries=[]):
         inst = cls()
+        inst.update_no = update_no
+        inst.entries = entries
         return inst
 
 
 class ProofMsg(Message):
     """
-    Used for querying and returing proofs.
+    Used for querying and returning proofs.
     When queried self.proof is None.
     """
     TYPE = MF.PROOF_MSG
     def __init__(self, raw=None):
+        self.domain_name = None
+        self.msc_label = None
+        self.eepki_proof = None
         super().__init__(raw)
 
     def parse(self, raw):
         dict_ = super().parse(raw)
+        if MF.DNAME not in dict_ or not dict_[MF.DNAME]:
+            raise EEPKIParseError("Incomplete message")
+        self.domain_name = dict_[MF.DNAME]
+        if MF.MSC_LABEL not in dict_:
+            raise EEPKIParseError("Incomplete message")
+        self.msc_label = dict_[MF.MSC_LABEL]
+        if MF.EEPKI_PROOF not in dict_:
+            raise EEPKIParseError("Incomplete message")
+        if dict_[MF.EEPKI_PROOF]:
+            self.eepki_proof = EEPKIProof(dict_[MF.EEPKI_PROOF])
 
     def pack(self):
         dict_ = super().pack()
-        # entry
+        dict_[MF.DNAME] = self.domain_name
+        dict_[MF.MSC_LABEL] = self.msc_label
+        if self.eeepki_proof:
+            dict_[MF.EEPKI_PROOF] = self.eepki_proof.pack()
+        else:
+            dict_[MF.EEPKI_PROOF] = None
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values():
+    def from_values(domain_name, msc_label=None, proof=None):
         inst = cls()
+        inst.domain_name = domain_name
+        inst.msc_label = msc_label
+        inst.eepki_proof = proof
         return inst
 
 
 class SignedRoot(Message):
+    """
+    Used for querying and returning signed roots.
+    """
     TYPE = MF.SIGNED_ROOT
     def __init__(self, raw=None):
         self.root = None
@@ -185,21 +227,31 @@ class SignedRoot(Message):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
+        if MF.ROOT in dict_:
+            self.root = dict_[MF.ROOT]
+        if MF.TIMESTAMP in dict_:
+            self.timestamp = dict_[MF.TIMESTAMP]
+        if MF.ENTRIES_NO in dict_:
+            self.entries_no = dict_[MF.ENTRIES_NO]
+        if MF.SIGNATURE in dict_:
+            self.signature = dict_[MF.SIGNATURE]
 
     def pack(self):
         dict_ = super().pack()
+        dict_[MF.ROOT] = self.root
+        dict_[MF.TIMESTAMP] = self.timestamp
+        dict_[MF.ENTRIES_NO] = self.entries_no
+        dict_[MF.SIGNATURE] = self.signature
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(root, entries_no, timestamp=None, signature=None):
+    def from_values(root, entries_no):
         inst = cls()
         inst.root = root
         inst.entries_no = entries_no
-        inst.timestamp = timestamp
-        inst.signature = signature
         return inst
 
-    def verify(self, public_key):
+    def validate(self, public_key):
         raise NotImplementedError
 
     def sign(self, private_key):
@@ -207,5 +259,14 @@ class SignedRoot(Message):
             self.timestamp = int(time.time())
         raise NotImplementedError
 
+
 def build_msg(raw):
-    raise NotImplementedError
+    classes = [ErrorMsg, AddMsg, AcceptMsg, UpdateMsg, ProofMsg, SignedRoot]
+    dict_ = bin_to_obj(raw)
+    if MF.TYPE not in dict_:
+        raise EEPKIParseError("Type not found")
+    type_ = dict_[MF.TYPE]
+    for cls in classes:
+        if cls.TYPE == type_:
+            return cls(raw)
+    raise EEPKIParseError("Class of type %s not found" % type_)

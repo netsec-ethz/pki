@@ -139,3 +139,7 @@ class MsgFields(object):
     DESCRIPTION = "description"
     TIMESTAMP = "timestamp"
     HASH = "hash"
+    UPDATE_NO = "update_no"
+    ENTRIES = "entries"
+    MSC_LABEL = "msc_label"
+    ROOT = "root"  # merge with SUBROOT?
