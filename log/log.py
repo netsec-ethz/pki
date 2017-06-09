@@ -27,6 +27,9 @@ from pki.lib.tree_proofs import EEPKIProof
 
 
 class Log(object):
+    """
+    Log class used by servers (actual logs) and auditors
+    """
     def __init__(self, entries=[]): #, trc, log_id, db_path, key_path=None):
         self.cons_tree = ConsistencyTree()
         self.policy_tree = PolicyTree()
@@ -79,10 +82,10 @@ class Log(object):
         return self.cons_tree.get_root()
 
     def sign_root(self):
-        pass
+        raise NotImplementedError
 
     def get_signed_root(self):
-        pass
+        raise NotImplementedError
 
     def get_proof(self, scp_label, msc_label=None):
         policy_proof = self.policy_tree.get_proof(scp_label)

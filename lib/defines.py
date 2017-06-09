@@ -21,6 +21,7 @@ DAY = 3600*24
 
 
 # TODO(PSz): introduce more granular classes
+# Inherit from SCIONBaseError?, helps with parsing etc...
 class EEPKIError(Exception):
     pass
 
