@@ -13,6 +13,8 @@
 # limitations under the License.
 import cbor
 
+from .defines import EEPKIParseError, MsgFields as MF
+
 # FIXME(PSz): to be replaced by canonical CBOR
 def obj_to_bin(dict_):
     return cbor.dumps(dict_, sort_keys=True)
@@ -31,3 +33,14 @@ def get_domains(domain_name):
         tmp = name + "." + tmp
         res.append(tmp[:-1])
     return res
+
+
+def build_obj(raw, classes):
+    dict_ = bin_to_obj(raw)
+    if MF.TYPE not in dict_:
+        raise EEPKIParseError("Type not found")
+    type_ = dict_[MF.TYPE]
+    for cls in classes:
+        if cls.TYPE == type_:
+            return cls(raw)
+    raise EEPKIParseError("Class of type %s not found" % type_)
