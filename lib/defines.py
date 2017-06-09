@@ -99,7 +99,7 @@ DEFAULT_POLICY = {
 
 
 class MsgFields(object):
-    #FIXME(PSz): getting too big, split it.
+    #FIXME(PSz): getting too big, move them to related classes.
     # Generic
     TYPE = "type"
     ENTRY = "entry"
@@ -139,7 +139,8 @@ class MsgFields(object):
     DESCRIPTION = "description"
     TIMESTAMP = "timestamp"
     HASH = "hash"
-    UPDATE_NO = "update_no"
+    ENTRY_FROM = "entry_from"
+    ENTRY_TO = "entry_from"
     ENTRIES = "entries"
     MSC_LABEL = "msc_label"
     ROOT = "root"  # merge with SUBROOT?

@@ -48,13 +48,13 @@ class ErrorMsg(Message):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if MF.DESCRIPTION not in dict_ or not dict_[MF.DESCRIPTION]:
-            raise EEPKIParseError("Incomplete message")
-        self.description = dict_[MF.DESCRIPTION]
+        if MF.DESCRIPTION in dict_:
+            self.description = dict_[MF.DESCRIPTION]
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.DESCRIPTION] = self.description
+        if self.description:
+            dict_[MF.DESCRIPTION] = self.description
         return obj_to_bin(dict_)
 
     @classmethod
@@ -126,9 +126,10 @@ class AcceptMsg(Message):
         raise NotImplementedError
 
     @classmethod
-    def from_values(hash_):
+    def from_values(hash_, private_key):
         inst = cls()
         self.hash = hash_
+        self.sign(private_key)
         return inst
 
 
@@ -139,26 +140,29 @@ class UpdateMsg(Message):
     """
     TYPE = MF.UPDATE_MSG
     def __init__(self, raw=None):
-        self.update_no = None
-        self entries = None
+        self.entry_from = None
+        self.entry_to = None
+        self entries = []
         super().__init__(raw)
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if MF.UPDATE_NO not in dict_ or not dict_[MF.UPDATE_NO]:
+        if MF.ENTRY_FROM not in dict_ or MF.ENTRY_TO not in dict_:
             raise EEPKIParseError("Incomplete message")
-        self.update_no = dict_[MF.UPDATE_NO]
-        if MF.ENTRIES not in dict_:
-            raise EEPKIParseError("Incomplete message")
-        for raw_entry in dict_[MF.ENTRIES]:
-            self.entries.append(build_entry(raw_entry))
+        self.entry_from = dict_[MF.ENTRY_FROM]
+        self.entry_to = dict_[MF.ENTRY_TO]
+        if MF.ENTRIES in dict_:
+            for raw_entry in dict_[MF.ENTRIES]:
+                self.entries.append(build_entry(raw_entry))
 
     def pack(self):
         dict_ = super().pack()
-        res = []
-        for entry in self.entries:
-            tmp.append(entry.pack())
-        dict_[MF.ENTRIES] = res
+        if self.entry_from is None or self.entry_to is None:
+            raise EEPKIParseError("Cannot pack")
+        dict_[MF.ENTRY_FROM] = self.entry_from
+        dict_[MF.ENTRY_TO] = self.entry_to
+        if self.entries:
+            dict_[MF.ENTRIES] = [entry.pack() for entry in self.entries]
         return obj_to_bin(dict_)
 
     @classmethod
