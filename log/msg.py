@@ -14,7 +14,7 @@
 import time
 
 from pki.lib.defines import EEPKIParseError, MsgFields as MF
-from pki.lib.utils import bin_to_obj, obj_to_bin
+from pki.lib.utils import bin_to_obj, build_obj, obj_to_bin
 from pki.lib.tree_entries import build_entry
 from pki.lib.tree_proofs import EEPKIProof
 
@@ -266,11 +266,4 @@ class SignedRoot(Message):
 
 def build_msg(raw):
     classes = [ErrorMsg, AddMsg, AcceptMsg, UpdateMsg, ProofMsg, SignedRoot]
-    dict_ = bin_to_obj(raw)
-    if MF.TYPE not in dict_:
-        raise EEPKIParseError("Type not found")
-    type_ = dict_[MF.TYPE]
-    for cls in classes:
-        if cls.TYPE == type_:
-            return cls(raw)
-    raise EEPKIParseError("Class of type %s not found" % type_)
+    return build_obj(raw, classes)

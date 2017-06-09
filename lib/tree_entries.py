@@ -17,7 +17,7 @@ from merkle import hash_function
 
 from .cert import MSC, Revocation, SCP
 from .defines import EEPKIParseError, MsgFields as MF
-from .utils import bin_to_obj, obj_to_bin
+from .utils import bin_to_obj, build_obj, obj_to_bin
 
 @total_ordering
 class TreeEntry(object):
@@ -259,11 +259,4 @@ class PolicyEntry(TreeEntry):
 
 def build_entry(raw):
     classes = [RevocationEntry, MSCEntry, CertificateEntry, SCPEntry, RootsEntry, PolicyEntry]
-    dict_ = bin_to_obj(raw)
-    if MF.TYPE not in dict_:
-        raise EEPKIParseError("Type not found")
-    type_ = dict_[MF.TYPE]
-    for cls in classes:
-        if cls.TYPE == type_:
-            return cls(raw)
-    raise EEPKIParseError("Class of type %s not found" % type_)
+    return build_obj(raw, classes)
