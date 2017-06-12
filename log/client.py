@@ -26,11 +26,6 @@ from test.integration.base_cli_srv import get_sciond_api_addr
 import lib.app.sciond as lib_sciond
 
 
-s_isd_as = ISD_AS("1-17")
-s_ip = haddr_parse(1, "127.1.1.1")
-c_isd_as = ISD_AS("2-25")
-c_ip = haddr_parse(1, "127.2.2.2")
-
 class Client(object):
     def __init__(self, addr, srv_addr):
         self.addr = addr
