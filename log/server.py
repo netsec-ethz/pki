@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import sys
 import threading
 
 from pki.log.log import Log
@@ -44,6 +45,11 @@ class LogServer(EEPKIElement):
 
 
 if __name__ == "__main__":
-    log_serv = LogServer(SCIONAddr.from_values(ISD_AS("1-17"), haddr_parse(1, "127.1.1.1")))
+    if len(sys.argv) != 3:
+        print("%s <ISD-AS> <IP>" % sys.argv[0])
+        # PYTHONPATH=..:../scion python3 log/server.py 1-17 127.1.1.1
+        sys.exit()
+    addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
+    log_serv = LogServer(addr)
     print("running log")
     log_serv.run()

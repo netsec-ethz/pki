@@ -13,6 +13,7 @@
 # limitations under the License.
 import logging
 import struct
+import sys
 
 from pki.lib.defines import EEPKI_PORT
 from pki.log.msg import *
@@ -64,7 +65,14 @@ class Client(object):
 
 
 if __name__ == "__main__":
-    cli = Client(SCIONAddr.from_values(c_isd_as, c_ip), SCIONAddr.from_values(s_isd_as, s_ip))
+    if len(sys.argv) != 5:
+        print("%s <srcISD-AS> <srcIP> <dstISD-AS> <dstIP>" % sys.argv[0])
+        # PYTHONPATH=..:../scion python3 log/client.py 2-25 127.2.2.2 1-17 127.1.1.1
+        sys.exit()
+    cli_addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
+    srv_addr = SCIONAddr.from_values(ISD_AS(sys.argv[3]), haddr_parse(1, sys.argv[4]))
+    # start client
+    cli = Client(cli_addr, srv_addr)
     cli.connect()
     msg = UpdateMsg.from_values(1, 1)
     cli.send_msg(msg)
