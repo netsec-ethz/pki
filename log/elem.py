@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import queue
+import threading
+import time
 
 from pki.lib.defines import EEPKI_PORT
-from .msg import build_msg
-from lib.scion.infrastructure.scion_elem import SCIONElement
+from pki.log.msg import build_msg
+from infrastructure.scion_elem import SCIONElement, MAX_QUEUE
+from lib.socket import SocketMgr
+from lib.msg_meta import TCPMetadata
 
 
 class EEPKIElement(SCIONElement):
@@ -35,8 +40,5 @@ class EEPKIElement(SCIONElement):
         self._socks = SocketMgr()
         self._setup_sockets(True)
         self._startup = time.time()
-        if self.USE_TCP:
-            self._DefaultMeta = TCPMetadata
-        else:
-            self._DefaultMeta = UDPMetadata
+        self._DefaultMeta = TCPMetadata
         self._msg_parser = build_msg
