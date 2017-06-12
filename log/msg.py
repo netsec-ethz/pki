@@ -58,7 +58,7 @@ class ErrorMsg(Message):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(desc):
+    def from_values(cls, desc):
         inst = cls()
         inst.description = desc
         return inst
@@ -82,7 +82,7 @@ class AddMsg(Message):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(entry):
+    def from_values(cls, entry):
         inst = cls()
         inst.entry = entry
         return inst
@@ -126,10 +126,10 @@ class AcceptMsg(Message):
         raise NotImplementedError
 
     @classmethod
-    def from_values(hash_, private_key):
+    def from_values(cls, hash_, private_key):
         inst = cls()
-        self.hash = hash_
-        self.sign(private_key)
+        inst.hash = hash_
+        inst.sign(private_key)
         return inst
 
 
@@ -142,7 +142,7 @@ class UpdateMsg(Message):
     def __init__(self, raw=None):
         self.entry_from = None
         self.entry_to = None
-        self entries = []
+        self.entries = []
         super().__init__(raw)
 
     def parse(self, raw):
@@ -166,9 +166,10 @@ class UpdateMsg(Message):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(update_no, entries=[]):
+    def from_values(cls, entry_from, entry_to, entries=[]):
         inst = cls()
-        inst.update_no = update_no
+        inst.entry_from = entry_from
+        inst.entry_to = entry_to
         inst.entries = entries
         return inst
 
@@ -209,7 +210,7 @@ class ProofMsg(Message):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(domain_name, msc_label=None, proof=None):
+    def from_values(cls, domain_name, msc_label=None, proof=None):
         inst = cls()
         inst.domain_name = domain_name
         inst.msc_label = msc_label
@@ -249,7 +250,7 @@ class SignedRoot(Message):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(root, entries_no):
+    def from_values(cls, root, entries_no):
         inst = cls()
         inst.root = root
         inst.entries_no = entries_no
