@@ -13,6 +13,7 @@
 # limitations under the License.
 import logging
 import sys
+import time
 import threading
 
 from pki.lib.tree_entries import (
@@ -34,19 +35,39 @@ from pki.log.msg import (
 # SCION
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
+from lib.thread import thread_safety_net
+
+
+def try_lock(handler):
+    def wrapper(inst, meta, msg):
+        # When log is under an update
+        if not inst.lock.acquire(blocking=False):
+            inst.handle_error(meta, "Service temporarily unavailable")
+            return
+        handler(inst, meta, msg)
+        inst.lock.release()
+    return wrapper
 
 
 class LogServer(EEPKIElement):
+    UPDATE_INTERVAL = 10  # FIXME(PSz): so low for testing
     def __init__(self, addr):
-        # Init network
-        super().__init__(addr)
         # Init log
         entries = self.init_db()
         self.log = Log(entries)
+        self.last_update = time.time()
         self.lock = threading.Lock()
+        self.entries_to_add = []
+        self.signed_root = None
+        self.update_root()
+        # Init network
+        super().__init__(addr)
 
     def init_db(self):
         return []
+
+    def update_root(self):
+        self.signed_root = RootsEntry.from_values()
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -70,44 +91,47 @@ class LogServer(EEPKIElement):
         else:
             self.handle_error(meta, "No handler for request")
 
-    def has_lock(self, meta):
-        # When log is under an update
-        if not self.lock.acquire(blocking=False):
-            self.handle_error(meta, "Service temporarily unavailable")
-            return False
-        return True
-
     def handle_error(self, meta, desc):
         msg = ErrorMsg.from_values(desc)
         self.send_meta(meta, msg.pack())
 
-    def handle_root_request(self, msg, meta): 
-        if not self.has_lock(meta):
-            return
+    @try_lock
+    def handle_root_request(self, msg, meta):
+        self.send_meta(meta, msg.pack())
 
-    def handle_proof_request(self, msg, meta): 
-        if not self.has_lock(meta):
-            return
+    @try_lock
+    def handle_proof_request(self, msg, meta):
+        pass
 
-    def handle_update_request(self, msg, meta): 
-        if not self.has_lock(meta):
-            return
+    @try_lock
+    def handle_update_request(self, msg, meta):
+        pass
 
-    def handle_add_scp(self, msg, meta): 
-        if not self.has_lock(meta):
-            return
+    @try_lock
+    def handle_add_scp(self, msg, meta):
+        pass
 
-    def handle_add_msc(self, msg, meta): 
-        if not self.has_lock(meta):
-            return
+    @try_lock
+    def handle_add_msc(self, msg, meta):
+        pass
 
-    def handle_add_rev(self, msg, meta): 
-        if not self.has_lock(meta):
-            return
-    
+    @try_lock
+    def handle_add_rev(self, msg, meta):
+        pass
+
     def worker(self):
-        raise NotImplementedError
+        start = time.time()
+        while self.run_flag.is_set():
+            sleep_interval(start, self.UPDATE_INTERVAL, "LogServer.worker sleep",
+                           self._quiet_startup())
+            start = time.time()
+            print("test")
 
+    def run(self):
+        threading.Thread(
+            target=thread_safety_net, args=(self.worker,),
+            name="LogServer.worker", daemon=True).start()
+        super().run()
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

@@ -33,10 +33,10 @@ class Message(object):
     def pack(self):
         return {MF.TYPE: self.TYPE}
 
-    def validate(self, public_key):
+    def validate(self, pub_key):
         raise NotImplementedError
 
-    def sign(self, private_key):
+    def sign(self, priv_key):
         raise NotImplementedError
 
 
@@ -115,21 +115,21 @@ class AcceptMsg(Message):
         dict_[MF.SIGNATURE] = self.signature
         return obj_to_bin(dict_)
 
-    def validate(self, entry, public_key):
+    def validate(self, entry, pub_key):
         if not self.hash or not self.timestamp or not self.signature:
             raise EEPKIParseError("Incomplete message")
         raise NotImplementedError
 
-    def sign(self, private_key):
+    def sign(self, priv_key):
         self.timestamp = int(time.time())
         # sign here
         raise NotImplementedError
 
     @classmethod
-    def from_values(cls, hash_, private_key):
+    def from_values(cls, hash_, priv_key):
         inst = cls()
         inst.hash = hash_
-        inst.sign(private_key)
+        inst.sign(priv_key)
         return inst
 
 
@@ -250,18 +250,18 @@ class SignedRoot(Message):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(cls, root, entries_no):
+    def from_values(cls, root, entries_no, priv_key):
         inst = cls()
         inst.root = root
         inst.entries_no = entries_no
+        self.timestamp = int(time.time())
+        self.sign(priv_key)
         return inst
 
-    def validate(self, public_key):
-        raise NotImplementedError
+    def sign(self, priv_key):
+        self.signature = b"SIGNATURE GOES HERE"
 
-    def sign(self, private_key):
-        if not self.timestamp:
-            self.timestamp = int(time.time())
+    def validate(self, pub_key):
         raise NotImplementedError
 
 
