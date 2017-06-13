@@ -78,8 +78,8 @@ class Log(object):
             logging.warning("Adding revocation for %s" % rev.label)
             ce.rev = rev
 
-    def get_root(self):
-        return self.cons_tree.get_root()
+    def get_root_entries(self):
+        return self.cons_tree.get_root(), len(self.cons_tree.entries)
 
     def sign_root(self):
         raise NotImplementedError
@@ -96,6 +96,3 @@ class Log(object):
         last_idx = len(self.cons_tree.entries) - 1
         cons_proof = self.cons_tree.get_proof_idx(last_idx)
         return EEPKIProof.from_values(cons_proof, policy_proof, cert_proof)
-
-    def run(self):
-        pass

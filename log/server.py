@@ -13,36 +13,188 @@
 # limitations under the License.
 import logging
 import sys
+import time
 import threading
+from merkle import hash_function
 
-from pki.log.log import Log
+from pki.lib.tree_entries import (
+    MSCEntry,
+    RevocationEntry,
+    RootsEntry,
+    SCPEntry,
+)
 from pki.log.elem import EEPKIElement
+from pki.log.log import Log
+from pki.log.msg import (
+    AcceptMsg,
+    AddMsg,
+    ErrorMsg,
+    ProofMsg,
+    SignedRoot,
+    UpdateMsg,
+)
 
 # SCION
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
+from lib.thread import thread_safety_net
+from lib.util import sleep_interval
+
+
+def try_lock(handler):
+    def wrapper(inst, meta, obj):
+        # When log is under an update
+        if not inst.lock.acquire(blocking=False):
+            inst.handle_error(meta, "Service temporarily unavailable")
+            return
+        handler(inst, meta, obj)
+        inst.lock.release()
+    return wrapper
 
 
 class LogServer(EEPKIElement):
+    UPDATE_INTERVAL = 10  # FIXME(PSz): so low for testing
     def __init__(self, addr):
+        # Init log
+        self.priv_key = None
+        entries = self.init_db()
+        self.log = Log(entries)
+        self.lock = threading.Lock()
+        self.mscs_to_add = []
+        self.scps_to_add = []
+        self.revs_to_add = []
+        self.signed_root = None
+        self.update_root()
         # Init network
         super().__init__(addr)
-        # Init log
-        self.log = Log()
-        self.lock = threading.Lock()
 
     def init_db(self):
-        pass
+        return []
+
+    def update_root(self):
+        root, entries_no = self.log.get_root_entries()
+        self.signed_root = SignedRoot.from_values(root, entries_no, self.priv_key)
 
     def handle_msg_meta(self, msg, meta):
         """
         Main routine to handle incoming SCION messages.
         """
-        print("Message and meta to handle: ", msg, meta)
+        if isinstance(msg, SignedRoot):
+            self.handle_root_request(msg, meta)
+        elif isinstance(msg, ProofMsg):
+            self.handle_proof_request(msg, meta)
+        elif isinstance(msg, UpdateMsg):
+            self.handle_update_request(msg, meta)
+        elif isinstance(msg, AddMsg):
+            if isinstance(msg.entry, SCPEntry):
+                self.handle_add_scp(msg.entry.scp, meta)
+            elif isinstance(msg.entry, MSCEntry):
+                self.handle_add_msc(msg.entry, msg.entry.msc, meta)
+            elif isinstance(msg.entry, RevocationEntry):
+                self.handle_add_rev(msg.entry, msg.entry.rev, meta)
+            else:
+                self.handle_error(meta, "No handler for entry")
+        else:
+            self.handle_error(meta, "No handler for request")
+
+    def handle_error(self, meta, desc):
+        msg = ErrorMsg.from_values(desc)
+        self.send_meta(meta, msg.pack())
+
+    @try_lock
+    def handle_root_request(self, msg, meta):
+        self.send_meta(meta, self.signed_root.pack())
+
+    @try_lock
+    def handle_proof_request(self, msg, meta):
+        proof = self.log.get_proof(msg.domain_name, msg.msc_label)
+        msg.eepki_proof = proof
+        self.send_meta(meta, msg.pack())
+
+    @try_lock
+    def handle_update_request(self, msg, meta):
+        msg.entries = self.log.entries[msg.entry_from:msg.entry_to]
+        self.send_meta(meta, msg.pack())
+
+    @try_lock
+    def handle_add_scp(self, scp, meta):
+        err = self.validate_scp(scp)
+        if err:
+            msg = ErrorMsg.from_values(",".join(err))
+            self.send_meta(meta, msg.pack())
+            return
+        self.scps_to_add.append(scp)
+        hash_ = hash_function(scp.pack()).digest()
+        msg = AcceptMsg.from_values(hash_, self.priv_key)
+        self.send_meta(meta, msg.pack())
+
+    def validate_scp(self, obj):
+        """
+        Verify SCP and check if it can be added.
+        """
+        return True
+
+    @try_lock
+    def handle_add_msc(self, msc, meta):
+        err = self.validate_msc(msc)
+        if err:
+            msg = ErrorMsg.from_values(",".join(err))
+            self.send_meta(meta, msg.pack())
+            return
+        self.mscs_to_add.append(msc)
+        hash_ = hash_function(msc.pack()).digest()
+        msg = AcceptMsg.from_values(hash_, self.priv_key)
+        self.send_meta(meta, msg.pack())
+
+    def validate_msc(self, obj):
+        """
+        Verify MSC and check if it can be added.
+        """
+        return True
+
+    @try_lock
+    def handle_add_rev(self, rev, meta):
+        err = self.validate_rev(rev)
+        if err:
+            msg = ErrorMsg.from_values(",".join(err))
+            self.send_meta(meta, msg.pack())
+            return
+        self.revs_to_add.append(rev)
+        hash_ = hash_function(rev.pack()).digest()
+        msg = AcceptMsg.from_values(hash_, self.priv_key)
+        self.send_meta(meta, msg.pack())
+
+    def validate_rev(self, obj):
+        """
+        Verify revocation and check if it can be added.
+        """
+        return True
 
     def worker(self):
-        raise NotImplementedError
+        start = time.time()
+        while self.run_flag.is_set():
+            sleep_interval(start, self.UPDATE_INTERVAL, "LogServer.worker sleep",
+                           self._quiet_startup())
+            start = time.time()
+            self.update()
 
+    def update(self):
+        with self.lock:
+            logging.debug("Starting log update")
+            for entry in self.mscs_to_add + self.scps_to_add + self.revs_to_add:
+                self.log.add(entry)
+            self.log.build()
+            self.update_root()
+            self.mscs_to_add = []
+            self.scps_to_add = []
+            self.revs_to_add = []
+            logging.debug("Log updated")
+
+    def run(self):
+        threading.Thread(
+            target=thread_safety_net, args=(self.worker,),
+            name="LogServer.worker", daemon=True).start()
+        super().run()
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
