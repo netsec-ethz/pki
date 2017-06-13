@@ -15,8 +15,21 @@ import logging
 import sys
 import threading
 
-from pki.log.log import Log
+from pki.lib.tree_entries import (
+    MSCEntry,
+    RevocationEntry,
+    SCPEntry,
+)
 from pki.log.elem import EEPKIElement
+from pki.log.log import Log
+from pki.log.msg import (
+    AcceptMsg,
+    AddMsg,
+    ErrorMsg,
+    ProofMsg,
+    SignedRoot,
+    UpdateMsg,
+)
 
 # SCION
 from lib.packet.host_addr import haddr_parse
@@ -28,18 +41,70 @@ class LogServer(EEPKIElement):
         # Init network
         super().__init__(addr)
         # Init log
-        self.log = Log()
+        entries = self.init_db()
+        self.log = Log(entries)
         self.lock = threading.Lock()
 
     def init_db(self):
-        pass
+        return []
 
     def handle_msg_meta(self, msg, meta):
         """
         Main routine to handle incoming SCION messages.
         """
-        print("Message and meta to handle: ", msg, meta)
+        if isinstance(msg, SignedRoot):
+            self.handle_root_request(msg, meta)
+        elif isinstance(msg, ProofMsg):
+            self.handle_proof_request(msg, meta)
+        elif isinstance(msg, UpdateMsg):
+            self.handle_update_request(msg, meta)
+        elif isinstance(msg, AddMsg):
+            if isinstance(msg.entry, SCPEntry):
+                self.handle_add_scp(msg, meta)
+            elif isinstance(msg.entry, MSCEntry):
+                self.handle_add_msc(msg, meta)
+            elif isinstance(msg.entry, RevocationEntry):
+                self.handle_add_rev(msg, meta)
+            else:
+                self.handle_error(meta, "No handler for entry")
+        else:
+            self.handle_error(meta, "No handler for request")
 
+    def has_lock(self, meta):
+        # When log is under an update
+        if not self.lock.acquire(blocking=False):
+            self.handle_error(meta, "Service temporarily unavailable")
+            return False
+        return True
+
+    def handle_error(self, meta, desc):
+        msg = ErrorMsg.from_values(desc)
+        self.send_meta(meta, msg.pack())
+
+    def handle_root_request(self, msg, meta): 
+        if not self.has_lock(meta):
+            return
+
+    def handle_proof_request(self, msg, meta): 
+        if not self.has_lock(meta):
+            return
+
+    def handle_update_request(self, msg, meta): 
+        if not self.has_lock(meta):
+            return
+
+    def handle_add_scp(self, msg, meta): 
+        if not self.has_lock(meta):
+            return
+
+    def handle_add_msc(self, msg, meta): 
+        if not self.has_lock(meta):
+            return
+
+    def handle_add_rev(self, msg, meta): 
+        if not self.has_lock(meta):
+            return
+    
     def worker(self):
         raise NotImplementedError
 
