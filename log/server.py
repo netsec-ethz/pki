@@ -117,10 +117,17 @@ class LogServer(EEPKIElement):
     @try_lock
     def handle_add(self, entry, obj, meta):
         # TODO(PSz): entry has to be writted to DB as it has metadata
+        if not self.verify(obj):
+            msg = ErrorMsg.from_values("Verification failed")
+            self.send_meta(meta, msg.pack())
+            return
         self.entries_to_add.append(obj)
         hash_ = hash_function(obj.pack()).digest()
         msg = AcceptMsg.from_values(hash_, self.priv_key)
         self.send_meta(meta, msg.pack())
+
+    def verify(self, obj):
+        return True
 
     def worker(self):
         start = time.time()
