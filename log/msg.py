@@ -254,8 +254,8 @@ class SignedRoot(Message):
         inst = cls()
         inst.root = root
         inst.entries_no = entries_no
-        self.timestamp = int(time.time())
-        self.sign(priv_key)
+        inst.timestamp = int(time.time())
+        inst.sign(priv_key)
         return inst
 
     def sign(self, priv_key):

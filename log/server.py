@@ -19,6 +19,7 @@ import threading
 from pki.lib.tree_entries import (
     MSCEntry,
     RevocationEntry,
+    RootsEntry,
     SCPEntry,
 )
 from pki.log.elem import EEPKIElement
@@ -36,6 +37,7 @@ from pki.log.msg import (
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
 from lib.thread import thread_safety_net
+from lib.util import sleep_interval
 
 
 def try_lock(handler):
@@ -53,9 +55,9 @@ class LogServer(EEPKIElement):
     UPDATE_INTERVAL = 10  # FIXME(PSz): so low for testing
     def __init__(self, addr):
         # Init log
+        self.priv_key = None
         entries = self.init_db()
         self.log = Log(entries)
-        self.last_update = time.time()
         self.lock = threading.Lock()
         self.entries_to_add = []
         self.signed_root = None
@@ -67,7 +69,8 @@ class LogServer(EEPKIElement):
         return []
 
     def update_root(self):
-        self.signed_root = RootsEntry.from_values()
+        root, entries_no = self.log.get_root_entries()
+        self.signed_root = SignedRoot.from_values(root, entries_no, self.priv_key)
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -125,7 +128,17 @@ class LogServer(EEPKIElement):
             sleep_interval(start, self.UPDATE_INTERVAL, "LogServer.worker sleep",
                            self._quiet_startup())
             start = time.time()
-            print("test")
+            self.update()
+
+    def update(self):
+        with self.lock:
+            logging.debug("Starting log update")
+            for entry in self.entries_to_add:
+                self.log.add(entry)
+            self.log.build()
+            self.update_root()
+            self.entries_to_add = []
+            logging.debug("Log updated")
 
     def run(self):
         threading.Thread(
