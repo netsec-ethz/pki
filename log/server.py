@@ -60,7 +60,9 @@ class LogServer(EEPKIElement):
         entries = self.init_db()
         self.log = Log(entries)
         self.lock = threading.Lock()
-        self.entries_to_add = []
+        self.mscs_to_add = []
+        self.scps_to_add = []
+        self.revs_to_add = []
         self.signed_root = None
         self.update_root()
         # Init network
@@ -85,11 +87,11 @@ class LogServer(EEPKIElement):
             self.handle_update_request(msg, meta)
         elif isinstance(msg, AddMsg):
             if isinstance(msg.entry, SCPEntry):
-                self.handle_add(msg.entry, msg.entry.scp, meta)
+                self.handle_add_scp(msg.entry.scp, meta)
             elif isinstance(msg.entry, MSCEntry):
-                self.handle_add(msg.entry, msg.entry.msc, meta)
+                self.handle_add_msc(msg.entry, msg.entry.msc, meta)
             elif isinstance(msg.entry, RevocationEntry):
-                self.handle_add(msg.entry, msg.entry.rev, meta)
+                self.handle_add_rev(msg.entry, msg.entry.rev, meta)
             else:
                 self.handle_error(meta, "No handler for entry")
         else:
@@ -115,18 +117,57 @@ class LogServer(EEPKIElement):
         self.send_meta(meta, msg.pack())
 
     @try_lock
-    def handle_add(self, entry, obj, meta):
-        # TODO(PSz): entry has to be writted to DB as it has metadata
-        if not self.verify(obj):
-            msg = ErrorMsg.from_values("Verification failed")
+    def handle_add_scp(self, scp, meta):
+        err = self.validate_scp(scp)
+        if err:
+            msg = ErrorMsg.from_values(",".join(err))
             self.send_meta(meta, msg.pack())
             return
-        self.entries_to_add.append(obj)
-        hash_ = hash_function(obj.pack()).digest()
+        self.scps_to_add.append(scp)
+        hash_ = hash_function(scp.pack()).digest()
         msg = AcceptMsg.from_values(hash_, self.priv_key)
         self.send_meta(meta, msg.pack())
 
-    def verify(self, obj):
+    def validate_scp(self, obj):
+        """
+        Verify SCP and check if it can be added.
+        """
+        return True
+
+    @try_lock
+    def handle_add_msc(self, msc, meta):
+        err = self.validate_msc(msc)
+        if err:
+            msg = ErrorMsg.from_values(",".join(err))
+            self.send_meta(meta, msg.pack())
+            return
+        self.mscs_to_add.append(msc)
+        hash_ = hash_function(msc.pack()).digest()
+        msg = AcceptMsg.from_values(hash_, self.priv_key)
+        self.send_meta(meta, msg.pack())
+
+    def validate_msc(self, obj):
+        """
+        Verify MSC and check if it can be added.
+        """
+        return True
+
+    @try_lock
+    def handle_add_rev(self, rev, meta):
+        err = self.validate_rev(rev)
+        if err:
+            msg = ErrorMsg.from_values(",".join(err))
+            self.send_meta(meta, msg.pack())
+            return
+        self.revs_to_add.append(rev)
+        hash_ = hash_function(rev.pack()).digest()
+        msg = AcceptMsg.from_values(hash_, self.priv_key)
+        self.send_meta(meta, msg.pack())
+
+    def validate_rev(self, obj):
+        """
+        Verify revocation and check if it can be added.
+        """
         return True
 
     def worker(self):
@@ -140,11 +181,13 @@ class LogServer(EEPKIElement):
     def update(self):
         with self.lock:
             logging.debug("Starting log update")
-            for entry in self.entries_to_add:
+            for entry in self.mscs_to_add + self.scps_to_add + self.revs_to_add:
                 self.log.add(entry)
             self.log.build()
             self.update_root()
-            self.entries_to_add = []
+            self.mscs_to_add = []
+            self.scps_to_add = []
+            self.revs_to_add = []
             logging.debug("Log updated")
 
     def run(self):
