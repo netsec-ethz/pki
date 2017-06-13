@@ -121,14 +121,13 @@ class AcceptMsg(Message):
         raise NotImplementedError
 
     def sign(self, priv_key):
-        self.timestamp = int(time.time())
-        # sign here
-        raise NotImplementedError
+        self.signature = b"SIGNATURE GOES HERE"
 
     @classmethod
     def from_values(cls, hash_, priv_key):
         inst = cls()
         inst.hash = hash_
+        inst.timestamp = int(time.time())
         inst.sign(priv_key)
         return inst
 
@@ -149,8 +148,12 @@ class UpdateMsg(Message):
         dict_ = super().parse(raw)
         if MF.ENTRY_FROM not in dict_ or MF.ENTRY_TO not in dict_:
             raise EEPKIParseError("Incomplete message")
-        self.entry_from = dict_[MF.ENTRY_FROM]
-        self.entry_to = dict_[MF.ENTRY_TO]
+        try:
+            self.entry_from = int(dict_[MF.ENTRY_FROM])
+            self.entry_to = int(dict_[MF.ENTRY_TO])
+        except TypeError:
+            raise EEPKIParseError("Incorrect message")
+
         if MF.ENTRIES in dict_:
             for raw_entry in dict_[MF.ENTRIES]:
                 self.entries.append(build_entry(raw_entry))

@@ -15,6 +15,7 @@ import logging
 import sys
 import time
 import threading
+from merkle import hash_function
 
 from pki.lib.tree_entries import (
     MSCEntry,
@@ -41,12 +42,12 @@ from lib.util import sleep_interval
 
 
 def try_lock(handler):
-    def wrapper(inst, meta, msg):
+    def wrapper(inst, meta, obj):
         # When log is under an update
         if not inst.lock.acquire(blocking=False):
             inst.handle_error(meta, "Service temporarily unavailable")
             return
-        handler(inst, meta, msg)
+        handler(inst, meta, obj)
         inst.lock.release()
     return wrapper
 
@@ -84,11 +85,11 @@ class LogServer(EEPKIElement):
             self.handle_update_request(msg, meta)
         elif isinstance(msg, AddMsg):
             if isinstance(msg.entry, SCPEntry):
-                self.handle_add_scp(msg, meta)
+                self.handle_add(msg.entry, msg.entry.scp, meta)
             elif isinstance(msg.entry, MSCEntry):
-                self.handle_add_msc(msg, meta)
+                self.handle_add(msg.entry, msg.entry.msc, meta)
             elif isinstance(msg.entry, RevocationEntry):
-                self.handle_add_rev(msg, meta)
+                self.handle_add(msg.entry, msg.entry.rev, meta)
             else:
                 self.handle_error(meta, "No handler for entry")
         else:
@@ -100,27 +101,26 @@ class LogServer(EEPKIElement):
 
     @try_lock
     def handle_root_request(self, msg, meta):
-        self.send_meta(meta, msg.pack())
+        self.send_meta(meta, self.signed_root.pack())
 
     @try_lock
     def handle_proof_request(self, msg, meta):
-        pass
+        proof = self.log.get_proof(msg.domain_name, msg.msc_label)
+        msg.eepki_proof = proof
+        self.send_meta(meta, msg.pack())
 
     @try_lock
     def handle_update_request(self, msg, meta):
-        pass
+        msg.entries = self.log.entries[msg.entry_from:msg.entry_to]
+        self.send_meta(meta, msg.pack())
 
     @try_lock
-    def handle_add_scp(self, msg, meta):
-        pass
-
-    @try_lock
-    def handle_add_msc(self, msg, meta):
-        pass
-
-    @try_lock
-    def handle_add_rev(self, msg, meta):
-        pass
+    def handle_add(self, entry, obj, meta):
+        # TODO(PSz): entry has to be writted to DB as it has metadata
+        self.entries_to_add.append(obj)
+        hash_ = hash_function(obj.pack()).digest()
+        msg = AcceptMsg.from_values(hash_, self.priv_key)
+        self.send_meta(meta, msg.pack())
 
     def worker(self):
         start = time.time()
