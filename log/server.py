@@ -89,9 +89,9 @@ class LogServer(EEPKIElement):
             if isinstance(msg.entry, SCPEntry):
                 self.handle_add_scp(msg.entry.scp, meta)
             elif isinstance(msg.entry, MSCEntry):
-                self.handle_add_msc(msg.entry, msg.entry.msc, meta)
+                self.handle_add_msc(msg.entry.msc, meta)
             elif isinstance(msg.entry, RevocationEntry):
-                self.handle_add_rev(msg.entry, msg.entry.rev, meta)
+                self.handle_add_rev(msg.entry.rev, meta)
             else:
                 self.handle_error(meta, "No handler for entry")
         else:
