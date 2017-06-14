@@ -110,10 +110,12 @@ class LogServer(EEPKIElement):
         proof = self.log.get_proof(msg.domain_name, msg.msc_label)
         msg.eepki_proof = proof
         self.send_meta(meta, msg.pack())
+        if msg.append_root:
+            self.handle_root_request(msg, meta)
 
     @try_lock
     def handle_update_request(self, msg, meta):
-        msg.entries = self.log.entries[msg.entry_from:msg.entry_to]
+        msg.entries = self.log.cons_tree.entries[msg.entry_from:msg.entry_to]
         self.send_meta(meta, msg.pack())
 
     @try_lock

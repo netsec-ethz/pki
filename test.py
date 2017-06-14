@@ -150,7 +150,7 @@ def prepare(msc, scp):
         mscs.append(tmp)
     return mscs, scps
 
-def test_log(mscs, scps):
+def test_log_local(mscs, scps):
     print("Starting log and building trees")
     log = Log()
     all_ = scps + mscs
@@ -190,6 +190,6 @@ if __name__ == "__main__":
     # Prepare lists of MSCs and SCPs
     mscs, scps = prepare(msc, scp)
     # Test log operations
-    log = test_log(mscs, scps)
+    log = test_log_local(mscs, scps)
     # Test proofs
     test_proofs(log, mscs, scps)

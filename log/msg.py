@@ -169,11 +169,10 @@ class UpdateMsg(Message):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(cls, entry_from, entry_to, entries=[]):
+    def from_values(cls, entry_from, entry_to):
         inst = cls()
         inst.entry_from = entry_from
         inst.entry_to = entry_to
-        inst.entries = entries
         return inst
 
 
@@ -187,6 +186,7 @@ class ProofMsg(Message):
         self.domain_name = None
         self.msc_label = None
         self.eepki_proof = None
+        self.append_root = None  # If true the RootMsg is sent (or requested) after ProofMsg
         super().__init__(raw)
 
     def parse(self, raw):
@@ -201,11 +201,16 @@ class ProofMsg(Message):
             raise EEPKIParseError("Incomplete message")
         if dict_[MF.EEPKI_PROOF]:
             self.eepki_proof = EEPKIProof(dict_[MF.EEPKI_PROOF])
+        if MF.APPEND_ROOT not in dict_:
+            raise EEPKIParseError("Incomplete message")
+        if MF.APPEND_ROOT in dict_:
+            self.append_root = dict_[MF.APPEND_ROOT]
 
     def pack(self):
         dict_ = super().pack()
         dict_[MF.DNAME] = self.domain_name
         dict_[MF.MSC_LABEL] = self.msc_label
+        dict_[MF.APPEND_ROOT] = self.append_root
         if self.eeepki_proof:
             dict_[MF.EEPKI_PROOF] = self.eepki_proof.pack()
         else:
@@ -213,11 +218,12 @@ class ProofMsg(Message):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(cls, domain_name, msc_label=None, proof=None):
+    def from_values(cls, domain_name, msc_label=None, append_root=True):
         inst = cls()
         inst.domain_name = domain_name
         inst.msc_label = msc_label
         inst.eepki_proof = proof
+        inst.append_root = append_root
         return inst
 
 

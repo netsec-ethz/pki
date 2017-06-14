@@ -147,3 +147,4 @@ class MsgFields(object):
     ENTRIES_NO = "entries_no"
     MSC_LABEL = "msc_label"
     ROOT = "root"  # merge with SUBROOT?
+    APPEND_ROOT = "append_root"
