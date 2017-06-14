@@ -13,4 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 sh ./generate.sh
-PYTHONPATH=..:../scion ./test.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc 
+PYTHONPATH=..:../scion ./tests.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc

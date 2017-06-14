@@ -15,7 +15,15 @@ import logging
 import struct
 import sys
 
-from pki.lib.defines import EEPKI_PORT
+from merkle import hash_function
+
+from pki.lib.cert import MSC, SCP, Revocation
+from pki.lib.defines import EEPKI_PORT, EEPKIError
+from pki.lib.tree_entries import (
+    MSCEntry,
+    RevocationEntry,
+    SCPEntry,
+    )
 from pki.log.msg import *
 
 from lib.tcp.socket import SCIONTCPSocket
@@ -26,17 +34,16 @@ from test.integration.base_cli_srv import get_sciond_api_addr
 import lib.app.sciond as lib_sciond
 
 
-class Client(object):
-    def __init__(self, addr, srv_addr):
+class LogClient(object):
+    def __init__(self, addr):
         self.addr = addr
-        self.src_addr = srv_addr
         self.sock = SCIONTCPSocket()
 
-    def connect(self):
+    def connect(self, src_addr):
         self.sock.bind((self.addr, 0))
-        path_info = self.get_paths_info(self.src_addr.isd_as)
+        path_info = self.get_paths_info(src_addr.isd_as)
         if path_info:
-            self.sock.connect(self.src_addr, EEPKI_PORT, *path_info[0])
+            self.sock.connect(src_addr, EEPKI_PORT, *path_info[0])
 
     def get_paths_info(self, dst_isd_as):
         lib_sciond.init(get_sciond_api_addr(self.addr))
@@ -47,8 +54,7 @@ class Client(object):
         return paths
 
     def send_msg(self, msg):
-        raw = msg.pack()
-        self.sock.sendall(struct.pack("!I", len(raw)) + raw)
+        self.sock.sendall(msg.pack_full())
 
     def recv_msg(self):
         size = struct.unpack("!I", recv_all(self.sock, 4, 0))[0]
@@ -57,6 +63,51 @@ class Client(object):
 
     def close(self):
         self.sock.close()
+
+    def get_proof_root(self, scp_label, msc_label=None, append_root=True):
+        req = ProofMsg.from_values(scp_label, msc_label, append_root)
+        self.send_msg(req)
+        proof_msg = self.recv_msg()
+        assert isinstance(proof_msg, ProofMsg)
+        root_msg = None
+        if append_root:
+            root_msg = self.recv_msg()
+            assert isinstance(root_msg, SignedRoot)
+        return (proof_msg, root_msg)
+
+    def submit(self, obj):
+        if isinstance(obj, MSC):
+            entry = MSCEntry.from_values(obj)
+        elif isinstance(obj, SCP):
+            entry = SCPEntry.from_values(obj)
+        elif isinstance(obj, Revocation):
+            entry = RevocationEntry.from_values(obj)
+        else:
+            raise EEPKIError("Object not supported: %s" % obj)
+        req = AddMsg.from_values(entry)
+        self.send_msg(req)
+        msg = self.recv_msg()
+        assert isinstance(msg, AcceptMsg)
+        # FIXME(PSz): app should validate that
+        # hash_ = hash_function(obj.pack()).digest()
+        # if  hash_ != msg.hash:
+        #     logging.error("Incorrect hashes: %s != %s" % (hash_, msg.hash))
+        #     return None
+        return msg
+
+    def get_root(self):
+        req = SignedRoot()
+        self.send_msg(req)
+        msg = self.recv_msg()
+        assert isinstance(msg, SignedRoot)
+        return msg
+
+    def get_update(self, entry_from, entry_to):
+        req = UpdateMsg.from_values(entry_from, entry_to)
+        self.send_msg(req)
+        msg = self.recv_msg()
+        assert isinstance(msg, UpdateMsg)
+        return msg
 
 
 if __name__ == "__main__":
@@ -67,7 +118,5 @@ if __name__ == "__main__":
     cli_addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
     srv_addr = SCIONAddr.from_values(ISD_AS(sys.argv[3]), haddr_parse(1, sys.argv[4]))
     # start client
-    cli = Client(cli_addr, srv_addr)
-    cli.connect()
-    msg = UpdateMsg.from_values(1, 1)
-    cli.send_msg(msg)
+    cli = LogClient(cli_addr)
+    cli.connect(srv_addr)
