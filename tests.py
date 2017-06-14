@@ -106,7 +106,7 @@ def test_proofs(log, mscs, scps):
     print("Testing proofs")
     # Prepare validation vectors
     vectors = []
-    root = log.get_root()
+    root, _ = log.get_root_entries()
     for scp, msc in zip(scps, mscs):
         scp_label = SCPEntry.from_values(scp).get_label()
         msc_label = CertificateEntry.from_values(msc).get_label()
@@ -170,21 +170,25 @@ def test_log_local(mscs, scps):
     assert log.policy_tree.get_root() == Log(all_).policy_tree.get_root()
     return log
 
-def test_cli_srv(log, mscs, scps):
-    print("\nStarting client-server test. Make sure that SCION is running and press enter")
-    input()
+def test_cli_srv(mscs, scps):
+    print("\nStarting client-server test. SCION must be running!!!")
     # First init server and client and connect
     cli_addr = SCIONAddr.from_values(ISD_AS("2-25"), haddr_parse(1, "127.2.2.2"))
     srv_addr = SCIONAddr.from_values(ISD_AS("1-17"), haddr_parse(1, "127.1.1.1"))
-    log_serv = LogServer(srv_addr)
-    threading.Thread(target=log_serv.run, name="LogServer", daemon=True).start()
+    # log_serv = LogServer(srv_addr)
+    # threading.Thread(target=log_serv.run, name="LogServer", daemon=True).start()
     cli = LogClient(cli_addr)
     time.sleep(1)
     cli.connect(srv_addr)
+    print("Log started and client connected")
+    all_ = scps + mscs
+    random.shuffle(all_)
+    for obj in all_:
+        print(cli.submit(obj))
 
 
 if __name__ == "__main__":
-    # PYTHONPATH=..:../scion ./test.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc
+    # PYTHONPATH=..:../scion ./tests.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc
     if len(sys.argv) != 4:
         print("%s <MSC> <SCP> <TRC>" % sys.argv[0])
         sys.exit()
@@ -212,4 +216,4 @@ if __name__ == "__main__":
     # Test proofs
     test_proofs(log, mscs, scps)
     # Test log with network
-    test_cli_srv(log, mscs, scps)
+    test_cli_srv(mscs, scps)

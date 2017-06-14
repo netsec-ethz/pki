@@ -17,7 +17,13 @@ import sys
 
 from merkle import hash_function
 
+from pki.lib.cert import MSC, SCP, Revocation
 from pki.lib.defines import EEPKI_PORT, EEPKIError
+from pki.lib.tree_entries import (
+    MSCEntry,
+    RevocationEntry,
+    SCPEntry,
+    )
 from pki.log.msg import *
 
 from lib.tcp.socket import SCIONTCPSocket
@@ -70,7 +76,7 @@ class LogClient(object):
             assert isinstance(root_msg, SignedRoot)
         return (proof_msg, root_msg)
 
-    def add(self, obj):
+    def submit(self, obj):
         if isinstance(obj, MSC):
             entry = MSCEntry.from_values(obj)
         elif isinstance(obj, SCP):
@@ -80,6 +86,7 @@ class LogClient(object):
         else:
             raise EEPKIError("Object not supported: %s" % obj)
         req = AddMsg.from_values(entry)
+        self.send_msg(req)
         msg = self.recv_msg()
         assert isinstance(msg, AcceptMsg)
         # FIXME(PSz): app should validate that
@@ -91,13 +98,14 @@ class LogClient(object):
 
     def get_root(self):
         req = SignedRoot()
+        self.send_msg(req)
         msg = self.recv_msg()
         assert isinstance(msg, SignedRoot)
         return msg
 
     def get_update(self, entry_from, entry_to):
         req = UpdateMsg.from_values(entry_from, entry_to)
-        cli.send_msg(req)
+        self.send_msg(req)
         msg = self.recv_msg()
         assert isinstance(msg, UpdateMsg)
         return msg

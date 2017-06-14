@@ -33,6 +33,9 @@ class Message(object):
     def pack(self):
         return {MF.TYPE: self.TYPE}
 
+    def pack_full(self):  # Consistency with SCION
+        return self.pack()
+
     def validate(self, pub_key):
         raise NotImplementedError
 

@@ -79,6 +79,7 @@ class LogServer(EEPKIElement):
         """
         Main routine to handle incoming SCION messages.
         """
+        print("handle_msg_meta")
         if isinstance(msg, SignedRoot):
             self.handle_root_request(msg, meta)
         elif isinstance(msg, ProofMsg):
@@ -98,78 +99,85 @@ class LogServer(EEPKIElement):
             self.handle_error(meta, "No handler for request")
 
     def handle_error(self, meta, desc):
+        print("handle_error")
         msg = ErrorMsg.from_values(desc)
-        self.send_meta(meta, msg.pack())
+        self.send_meta(msg, meta)
 
     @try_lock
     def handle_root_request(self, msg, meta):
+        print("handle_root_request")
         self.send_meta(meta, self.signed_root.pack())
 
     @try_lock
     def handle_proof_request(self, msg, meta):
+        print("handle_proof_request")
         proof = self.log.get_proof(msg.domain_name, msg.msc_label)
         msg.eepki_proof = proof
-        self.send_meta(meta, msg.pack())
+        self.send_meta(msg, meta)
         if msg.append_root:
             self.handle_root_request(msg, meta)
 
     @try_lock
     def handle_update_request(self, msg, meta):
+        print("handle_update_request")
         msg.entries = self.log.cons_tree.entries[msg.entry_from:msg.entry_to]
-        self.send_meta(meta, msg.pack())
+        self.send_meta(msg, meta)
 
     @try_lock
     def handle_add_scp(self, scp, meta):
+        print("handle_add_scp")
         err = self.validate_scp(scp)
         if err:
             msg = ErrorMsg.from_values(",".join(err))
-            self.send_meta(meta, msg.pack())
+            self.send_meta(msg, meta)
             return
         self.scps_to_add.append(scp)
-        self.accept(rev, meta)
+        self.accept(scp, meta)
 
-    def validate_scp(self, obj):
+    def validate_scp(self, scp):
         """
         Verify SCP and check if it can be added.
         """
-        return True
+        return []
 
     @try_lock
     def handle_add_msc(self, msc, meta):
+        print("handle_add_msc")
         err = self.validate_msc(msc)
         if err:
             msg = ErrorMsg.from_values(",".join(err))
-            self.send_meta(meta, msg.pack())
+            self.send_meta(msg, meta)
             return
         self.mscs_to_add.append(msc)
-        self.accept(rev, meta)
+        self.accept(msc, meta)
 
-    def validate_msc(self, obj):
+    def validate_msc(self, msc):
         """
         Verify MSC and check if it can be added.
         """
-        return True
+        return []
 
     @try_lock
     def handle_add_rev(self, rev, meta):
+        print("handle_add_rev")
         err = self.validate_rev(rev)
         if err:
             msg = ErrorMsg.from_values(",".join(err))
-            self.send_meta(meta, msg.pack())
+            self.send_meta(msg, meta)
             return
         self.revs_to_add.append(rev)
         self.accept(rev, meta)
 
-    def validate_rev(self, obj):
+    def validate_rev(self, rev):
         """
         Verify revocation and check if it can be added.
         """
-        return True
+        return []
 
     def accept(self, obj, meta):
         hash_ = hash_function(obj.pack()).digest()
         msg = AcceptMsg.from_values(hash_, self.priv_key)
-        self.send_meta(meta, msg.pack())
+        self.send_meta(msg, meta)
 
     def worker(self):
         start = time.time()
