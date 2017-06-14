@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import struct
 import time
 
 from pki.lib.defines import EEPKIParseError, MsgFields as MF
@@ -34,7 +35,8 @@ class Message(object):
         return {MF.TYPE: self.TYPE}
 
     def pack_full(self):  # Consistency with SCION
-        return self.pack()
+        raw = self.pack()
+        return struct.pack("!I", len(raw)) + raw
 
     def validate(self, pub_key):
         raise NotImplementedError

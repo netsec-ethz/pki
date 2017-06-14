@@ -54,8 +54,7 @@ class LogClient(object):
         return paths
 
     def send_msg(self, msg):
-        raw = msg.pack()
-        self.sock.sendall(struct.pack("!I", len(raw)) + raw)
+        self.sock.sendall(msg.pack_full())
 
     def recv_msg(self):
         size = struct.unpack("!I", recv_all(self.sock, 4, 0))[0]
