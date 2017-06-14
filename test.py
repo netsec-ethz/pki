@@ -16,6 +16,8 @@ import sys
 import copy
 import random
 import string
+import threading
+import time
 from collections import defaultdict
 
 from cryptography.hazmat.backends import default_backend
@@ -24,6 +26,8 @@ from cryptography.hazmat.primitives import hashes, serialization
 from pki.lib.defines import EEPKIError, SecLevel, ValidationResult
 from pki.lib.cert import MSC, SCP
 from pki.log.log import Log
+from pki.log.client import LogClient
+from pki.log.server import LogServer
 from pki.lib.verifier import verify
 from pki.lib.x509 import certs_to_pem, pem_to_certs
 from pki.lib.trees import *
@@ -32,6 +36,8 @@ from pki.lib.tree_proofs import EEPKIProof
 
 # SCION
 from lib.crypto.trc import TRC
+from lib.packet.host_addr import haddr_parse
+from lib.packet.scion_addr import ISD_AS, SCIONAddr
 
 def random_domain_names(level=3, per_level=2, length=2):
     def random_word(length):
@@ -164,6 +170,18 @@ def test_log_local(mscs, scps):
     assert log.policy_tree.get_root() == Log(all_).policy_tree.get_root()
     return log
 
+def test_cli_srv(log, mscs, scps):
+    print("\nStarting client-server test. Make sure that SCION is running and press enter")
+    input()
+    # First init server and client and connect
+    cli_addr = SCIONAddr.from_values(ISD_AS("2-25"), haddr_parse(1, "127.2.2.2"))
+    srv_addr = SCIONAddr.from_values(ISD_AS("1-17"), haddr_parse(1, "127.1.1.1"))
+    log_serv = LogServer(srv_addr)
+    threading.Thread(target=log_serv.run, name="LogServer", daemon=True).start()
+    cli = LogClient(cli_addr)
+    time.sleep(1)
+    cli.connect(srv_addr)
+
 
 if __name__ == "__main__":
     # PYTHONPATH=..:../scion ./test.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc
@@ -193,3 +211,5 @@ if __name__ == "__main__":
     log = test_log_local(mscs, scps)
     # Test proofs
     test_proofs(log, mscs, scps)
+    # Test log with network
+    test_cli_srv(log, mscs, scps)

@@ -126,9 +126,7 @@ class LogServer(EEPKIElement):
             self.send_meta(meta, msg.pack())
             return
         self.scps_to_add.append(scp)
-        hash_ = hash_function(scp.pack()).digest()
-        msg = AcceptMsg.from_values(hash_, self.priv_key)
-        self.send_meta(meta, msg.pack())
+        self.accept(rev, meta)
 
     def validate_scp(self, obj):
         """
@@ -144,9 +142,7 @@ class LogServer(EEPKIElement):
             self.send_meta(meta, msg.pack())
             return
         self.mscs_to_add.append(msc)
-        hash_ = hash_function(msc.pack()).digest()
-        msg = AcceptMsg.from_values(hash_, self.priv_key)
-        self.send_meta(meta, msg.pack())
+        self.accept(rev, meta)
 
     def validate_msc(self, obj):
         """
@@ -162,15 +158,18 @@ class LogServer(EEPKIElement):
             self.send_meta(meta, msg.pack())
             return
         self.revs_to_add.append(rev)
-        hash_ = hash_function(rev.pack()).digest()
-        msg = AcceptMsg.from_values(hash_, self.priv_key)
-        self.send_meta(meta, msg.pack())
+        self.accept(rev, meta)
 
     def validate_rev(self, obj):
         """
         Verify revocation and check if it can be added.
         """
         return True
+
+    def accept(self, obj, meta):
+        hash_ = hash_function(obj.pack()).digest()
+        msg = AcceptMsg.from_values(hash_, self.priv_key)
+        self.send_meta(meta, msg.pack())
 
     def worker(self):
         start = time.time()

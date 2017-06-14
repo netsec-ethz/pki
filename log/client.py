@@ -28,17 +28,16 @@ from test.integration.base_cli_srv import get_sciond_api_addr
 import lib.app.sciond as lib_sciond
 
 
-class Client(object):
-    def __init__(self, addr, srv_addr):
+class LogClient(object):
+    def __init__(self, addr):
         self.addr = addr
-        self.src_addr = srv_addr
         self.sock = SCIONTCPSocket()
 
-    def connect(self):
+    def connect(self, src_addr):
         self.sock.bind((self.addr, 0))
-        path_info = self.get_paths_info(self.src_addr.isd_as)
+        path_info = self.get_paths_info(src_addr.isd_as)
         if path_info:
-            self.sock.connect(self.src_addr, EEPKI_PORT, *path_info[0])
+            self.sock.connect(src_addr, EEPKI_PORT, *path_info[0])
 
     def get_paths_info(self, dst_isd_as):
         lib_sciond.init(get_sciond_api_addr(self.addr))
@@ -112,5 +111,5 @@ if __name__ == "__main__":
     cli_addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
     srv_addr = SCIONAddr.from_values(ISD_AS(sys.argv[3]), haddr_parse(1, sys.argv[4]))
     # start client
-    cli = Client(cli_addr, srv_addr)
-    cli.connect()
+    cli = LogClient(cli_addr)
+    cli.connect(srv_addr)
