@@ -87,6 +87,7 @@ class LogClient(object):
         req = AddMsg.from_values(entry)
         self.send_msg(req)
         msg = self.recv_msg()
+        print(msg)
         assert isinstance(msg, AcceptMsg)
         # FIXME(PSz): app should validate that
         # hash_ = hash_function(obj.pack()).digest()

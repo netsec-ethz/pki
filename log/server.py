@@ -18,6 +18,7 @@ import threading
 from merkle import hash_function
 
 from pki.lib.tree_entries import (
+    CertificateEntry,
     MSCEntry,
     RevocationEntry,
     RootsEntry,
@@ -146,7 +147,7 @@ class LogServer(EEPKIElement):
             return "First SCP is missing"
         if latest:
             if latest.get_version() + 1 != scp.get_version():
-                return "Latest known SCP is %d" latest.get_version()
+                return "Latest known SCP is %d" % latest.get_version()
             pass # Validate SCP update here (i.e., latest against scp)
         # TODO(PSz): validate SCP crypto..
         return None
@@ -167,7 +168,7 @@ class LogServer(EEPKIElement):
         """
         # First check whether MSC already exist
         label = CertificateEntry.from_values(msc).get_label()
-        if self.log.cert_tree.get_entry(label)
+        if self.log.cert_tree.get_entry(label):
             return "Entry is logged"
         for tmp in self.mscs_to_add:
             if tmp.pack() == msc.pack():

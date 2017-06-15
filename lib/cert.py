@@ -148,7 +148,7 @@ class SCP(EECert):
         return self.policy[PolicyFields.VERSION]
 
     def get_domain_name(self):
-        return get_cn(certs[0])
+        return get_cn(self.chains[0][0])
 
     def __repr__(self):
         tmp = ["SCP\n"]
