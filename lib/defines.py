@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from lib.errors import SCIONBaseError
+from lib.errors import SCIONBaseError, SCIONVerificationError
 
 EEPKI_PORT = 9088
 DEFAULT_CERT_VALIDITY = 120  # In days.
@@ -27,6 +27,10 @@ class EEPKIError(SCIONBaseError):  # To help with SCION parsing etc...
 
 
 class EEPKIParseError(EEPKIError):
+    pass
+
+
+class EEPKIValidationError(SCIONVerificationError):
     pass
 
 

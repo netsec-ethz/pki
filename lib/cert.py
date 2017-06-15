@@ -70,7 +70,7 @@ class MSC(EECert):
         self.policy_binding = None
         super().__init__(pem)
         # FIXME(PSz) not sure it should be checked here...
-        assert self._verify_msc_integrity()  # TODO(PSz): raise an exception
+        assert self.validate()  # TODO(PSz): raise an exception
 
     def parse(self, pem):
         certs = pem_to_certs(pem)
@@ -95,7 +95,7 @@ class MSC(EECert):
         policy_pem = certs_to_pem([self.policy_binding])
         return b"".join([chain_pem, policy_pem])
 
-    def _verify_msc_integrity(self):
+    def validate(self):
         # Skip the policy binding (the last element)
         pem = CERT_SEP.join(self.pem.split(CERT_SEP)[:-1])
         # Generate policy binding from the pem
