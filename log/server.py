@@ -134,6 +134,21 @@ class LogServer(EEPKIElement):
         """
         Verify SCP and check if it can be added.
         """
+        # Check whether this SCP is a subsequent (or the first) one
+        label = scp.get_domain_name()
+        for tmp in reversed(self.scps_to_add):
+            if tmp.get_domain_name() == label:
+                latest = tmp
+                break
+        else:
+            latest = self.log.policy_tree.get_entry(label)
+        if not latest and scp.get_version() != 1:
+            return "First SCP is missing"
+        if latest:
+            if latest.get_version() + 1 != scp.get_version():
+                return "Latest known SCP is %d" latest.get_version()
+            pass # Validate SCP update here (i.e., latest against scp)
+        # TODO(PSz): validate SCP crypto..
         return None
 
     @try_lock
@@ -161,6 +176,7 @@ class LogServer(EEPKIElement):
             msc.validate()
         except EEPKIError:
                 return "Validation failed"
+        # TODO(PSz): extra validation here
         return None
 
     @try_lock

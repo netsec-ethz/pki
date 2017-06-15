@@ -15,7 +15,7 @@ import logging
 
 from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
-from .defines import CERT_SEP, SecLevel
+from .defines import CERT_SEP, PolicyFields, SecLevel
 from .x509 import (
     ChainProperties,
     binding_from_pem,
@@ -121,6 +121,8 @@ class SCP(EECert):
     """
     def __init__(self, pem):
         self.policy = None
+        self.domain_name = None
+        self.version = None
         super().__init__(pem)
 
     def parse(self, pem):
@@ -141,6 +143,12 @@ class SCP(EECert):
                 self.chains.insert(0, chain)
                 chain = []
         assert not chain  # TODO(PSz): unterminated chain, raise an exception
+
+    def get_version(self):
+        return self.policy[PolicyFields.VERSION]
+
+    def get_domain_name(self):
+        return get_cn(certs[0])
 
     def __repr__(self):
         tmp = ["SCP\n"]

@@ -47,7 +47,7 @@ class ValidationResult(object):
 
 
 class PolicyFields(object):
-    POLICY_VERSION = 'POLICY_VERSION'
+    VERSION = 'VERSION'
     LOG_LIST = 'LOG_LIST'
     LOG_TIMEOUT = 'LOG_TIMEOUT'
     CA_LIST = 'CA_LIST'
@@ -79,7 +79,7 @@ class PolicyFields(object):
 
 
 DEFAULT_POLICY = {
-    PolicyFields.POLICY_VERSION: 1,
+    PolicyFields.VERSION: 1,
     PolicyFields.LOG_LIST: [],
     PolicyFields.LOG_TIMEOUT: DAY*7,
     PolicyFields.CA_LIST: [],
