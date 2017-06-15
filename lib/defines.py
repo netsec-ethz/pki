@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from lib.errors import SCIONBaseError
+from lib.errors import SCIONBaseError, SCIONVerificationError
 
 EEPKI_PORT = 9088
 DEFAULT_CERT_VALIDITY = 120  # In days.
@@ -30,6 +30,10 @@ class EEPKIParseError(EEPKIError):
     pass
 
 
+class EEPKIValidationError(SCIONVerificationError):
+    pass
+
+
 class SecLevel(object):
     LOW = 0
     MEDIUM = 1
@@ -43,7 +47,7 @@ class ValidationResult(object):
 
 
 class PolicyFields(object):
-    POLICY_VERSION = 'POLICY_VERSION'
+    VERSION = 'VERSION'
     LOG_LIST = 'LOG_LIST'
     LOG_TIMEOUT = 'LOG_TIMEOUT'
     CA_LIST = 'CA_LIST'
@@ -75,7 +79,7 @@ class PolicyFields(object):
 
 
 DEFAULT_POLICY = {
-    PolicyFields.POLICY_VERSION: 1,
+    PolicyFields.VERSION: 1,
     PolicyFields.LOG_LIST: [],
     PolicyFields.LOG_TIMEOUT: DAY*7,
     PolicyFields.CA_LIST: [],

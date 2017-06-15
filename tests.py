@@ -191,7 +191,7 @@ if __name__ == "__main__":
     # PYTHONPATH=..:../scion ./tests.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc
     if len(sys.argv) != 4:
         print("%s <MSC> <SCP> <TRC>" % sys.argv[0])
-        sys.exit()
+        sys.exit(-1)
     # Create a MSC and SCP and test basic parsing and packing
     with open(sys.argv[1], "rb") as f:
         pem = f.read()

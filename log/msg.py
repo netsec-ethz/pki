@@ -11,13 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import struct
 import time
 
-from pki.lib.defines import EEPKIParseError, MsgFields as MF
+from pki.lib.defines import EEPKIParseError, EEPKIValidationError, MsgFields as MF
 from pki.lib.utils import bin_to_obj, build_obj, obj_to_bin
 from pki.lib.tree_entries import build_entry
 from pki.lib.tree_proofs import EEPKIProof
+
+from lib.crypto.asymcrypto import sign, verify
 
 class Message(object):
     TYPE = "SHOULDN'T SEE THAT!!!"
@@ -28,7 +31,7 @@ class Message(object):
     def parse(self, raw):
         dict_ = bin_to_obj(raw)
         if MF.TYPE not in dict_ or dict_[MF.TYPE] != self.TYPE:
-            raise EEPKIParseError("No or incorrect type")
+            raise EEPKIParseError("Incorrect or no type")
         return dict_
 
     def pack(self):
@@ -38,11 +41,17 @@ class Message(object):
         raw = self.pack()
         return struct.pack("!I", len(raw)) + raw
 
+
+class SignedMessage(Message):
     def validate(self, pub_key):
-        raise NotImplementedError
+        inst = copy.copy(self)
+        inst.signature = b""
+        return verify(inst.pack(), self.signature, pub_key)
 
     def sign(self, priv_key):
-        raise NotImplementedError
+        inst = copy.copy(self)
+        inst.signature = b""
+        self.signature = sign(inst.pack(), priv_key)
 
 
 class ErrorMsg(Message):
@@ -93,7 +102,7 @@ class AddMsg(Message):
         return inst
 
 
-class AcceptMsg(Message):
+class AcceptMsg(SignedMessage):
     TYPE = MF.ACCEPT_MSG
     def __init__(self, raw=None):
         self.hash = None
@@ -119,14 +128,6 @@ class AcceptMsg(Message):
         dict_[MF.TIMESTAMP] = self.timestamp
         dict_[MF.SIGNATURE] = self.signature
         return obj_to_bin(dict_)
-
-    def validate(self, entry, pub_key):
-        if not self.hash or not self.timestamp or not self.signature:
-            raise EEPKIParseError("Incomplete message")
-        raise NotImplementedError
-
-    def sign(self, priv_key):
-        self.signature = b"SIGNATURE GOES HERE"
 
     @classmethod
     def from_values(cls, hash_, priv_key):
@@ -232,7 +233,7 @@ class ProofMsg(Message):
         return inst
 
 
-class SignedRoot(Message):
+class SignedRoot(SignedMessage):
     """
     Used for querying and returning signed roots.
     """
@@ -271,12 +272,6 @@ class SignedRoot(Message):
         inst.timestamp = int(time.time())
         inst.sign(priv_key)
         return inst
-
-    def sign(self, priv_key):
-        self.signature = b"SIGNATURE GOES HERE"
-
-    def validate(self, pub_key):
-        raise NotImplementedError
 
 
 def build_msg(raw):

@@ -18,6 +18,7 @@ import threading
 from merkle import hash_function
 
 from pki.lib.tree_entries import (
+    CertificateEntry,
     MSCEntry,
     RevocationEntry,
     RootsEntry,
@@ -56,7 +57,8 @@ class LogServer(EEPKIElement):
     UPDATE_INTERVAL = 10  # FIXME(PSz): so low for testing
     def __init__(self, addr):
         # Init log
-        self.priv_key = None
+        self.priv_key = b']\xc1\xdc\x07o\x0c\xa2(\x95JA\xdc\xcd\x9ez\xc2!\xd2\x82\xe0cK?\xf2X\xb1H\xe7\xcf\xf7\xad\xf4'
+        self.pub_key = b'\xfd\xd99\xb3\x9e-\xa4%1\x80H\x9c\xd72?\xb1tCW;\xa1\x1b_o\xf8\xe8\xcf\xca\xdb\x0b>\x12'
         entries = self.init_db()
         self.log = Log(entries)
         self.lock = threading.Lock()
@@ -79,7 +81,6 @@ class LogServer(EEPKIElement):
         """
         Main routine to handle incoming SCION messages.
         """
-        print("handle_msg_meta")
         if isinstance(msg, SignedRoot):
             self.handle_root_request(msg, meta)
         elif isinstance(msg, ProofMsg):
@@ -87,6 +88,7 @@ class LogServer(EEPKIElement):
         elif isinstance(msg, UpdateMsg):
             self.handle_update_request(msg, meta)
         elif isinstance(msg, AddMsg):
+            # FIXME(PSz): adding *Entry instances may be cleaner
             if isinstance(msg.entry, SCPEntry):
                 self.handle_add_scp(msg.entry.scp, meta)
             elif isinstance(msg.entry, MSCEntry):
@@ -99,18 +101,15 @@ class LogServer(EEPKIElement):
             self.handle_error(meta, "No handler for request")
 
     def handle_error(self, meta, desc):
-        print("handle_error")
         msg = ErrorMsg.from_values(desc)
         self.send_meta(msg, meta)
 
     @try_lock
     def handle_root_request(self, msg, meta):
-        print("handle_root_request")
         self.send_meta(meta, self.signed_root.pack())
 
     @try_lock
     def handle_proof_request(self, msg, meta):
-        print("handle_proof_request")
         proof = self.log.get_proof(msg.domain_name, msg.msc_label)
         msg.eepki_proof = proof
         self.send_meta(msg, meta)
@@ -119,16 +118,14 @@ class LogServer(EEPKIElement):
 
     @try_lock
     def handle_update_request(self, msg, meta):
-        print("handle_update_request")
         msg.entries = self.log.cons_tree.entries[msg.entry_from:msg.entry_to]
         self.send_meta(msg, meta)
 
     @try_lock
     def handle_add_scp(self, scp, meta):
-        print("handle_add_scp")
         err = self.validate_scp(scp)
         if err:
-            msg = ErrorMsg.from_values(",".join(err))
+            msg = ErrorMsg.from_values(err)
             self.send_meta(msg, meta)
             return
         self.scps_to_add.append(scp)
@@ -138,14 +135,28 @@ class LogServer(EEPKIElement):
         """
         Verify SCP and check if it can be added.
         """
-        return []
+        # Check whether this SCP is a subsequent (or the first) one
+        label = scp.get_domain_name()
+        for tmp in reversed(self.scps_to_add):
+            if tmp.get_domain_name() == label:
+                latest = tmp
+                break
+        else:
+            latest = self.log.policy_tree.get_entry(label)
+        if not latest and scp.get_version() != 1:
+            return "First SCP is missing"
+        if latest:
+            if latest.get_version() + 1 != scp.get_version():
+                return "Latest known SCP is %d" % latest.get_version()
+            pass # Validate SCP update here (i.e., latest against scp)
+        # TODO(PSz): validate SCP crypto..
+        return None
 
     @try_lock
     def handle_add_msc(self, msc, meta):
-        print("handle_add_msc")
         err = self.validate_msc(msc)
         if err:
-            msg = ErrorMsg.from_values(",".join(err))
+            msg = ErrorMsg.from_values(err)
             self.send_meta(msg, meta)
             return
         self.mscs_to_add.append(msc)
@@ -155,14 +166,25 @@ class LogServer(EEPKIElement):
         """
         Verify MSC and check if it can be added.
         """
-        return []
+        # First check whether MSC already exist
+        label = CertificateEntry.from_values(msc).get_label()
+        if self.log.cert_tree.get_entry(label):
+            return "Entry is logged"
+        for tmp in self.mscs_to_add:
+            if tmp.pack() == msc.pack():
+                return "Entry is scheduled"
+        try:
+            msc.validate()
+        except EEPKIError:
+                return "Validation failed"
+        # TODO(PSz): extra validation here
+        return None
 
     @try_lock
     def handle_add_rev(self, rev, meta):
-        print("handle_add_rev")
         err = self.validate_rev(rev)
         if err:
-            msg = ErrorMsg.from_values(",".join(err))
+            msg = ErrorMsg.from_values(err)
             self.send_meta(msg, meta)
             return
         self.revs_to_add.append(rev)
@@ -172,7 +194,7 @@ class LogServer(EEPKIElement):
         """
         Verify revocation and check if it can be added.
         """
-        return []
+        return None
 
     def accept(self, obj, meta):
         hash_ = hash_function(obj.pack()).digest()
@@ -209,7 +231,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("%s <ISD-AS> <IP>" % sys.argv[0])
         # PYTHONPATH=..:../scion python3 log/server.py 1-17 127.1.1.1
-        sys.exit()
+        sys.exit(-1)
     addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
     log_serv = LogServer(addr)
     print("running log")

@@ -87,6 +87,7 @@ class LogClient(object):
         req = AddMsg.from_values(entry)
         self.send_msg(req)
         msg = self.recv_msg()
+        print(msg)
         assert isinstance(msg, AcceptMsg)
         # FIXME(PSz): app should validate that
         # hash_ = hash_function(obj.pack()).digest()
@@ -114,7 +115,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 5:
         print("%s <srcISD-AS> <srcIP> <dstISD-AS> <dstIP>" % sys.argv[0])
         # PYTHONPATH=..:../scion python3 log/client.py 2-25 127.2.2.2 1-17 127.1.1.1
-        sys.exit()
+        sys.exit(-1)
     cli_addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
     srv_addr = SCIONAddr.from_values(ISD_AS(sys.argv[3]), haddr_parse(1, sys.argv[4]))
     # start client

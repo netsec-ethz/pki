@@ -15,7 +15,7 @@ import logging
 
 from cryptography.x509 import CertificatePolicies, ExtensionNotFound
 
-from .defines import CERT_SEP, SecLevel
+from .defines import CERT_SEP, PolicyFields, SecLevel
 from .x509 import (
     ChainProperties,
     binding_from_pem,
@@ -70,7 +70,7 @@ class MSC(EECert):
         self.policy_binding = None
         super().__init__(pem)
         # FIXME(PSz) not sure it should be checked here...
-        assert self._verify_msc_integrity()  # TODO(PSz): raise an exception
+        assert self.validate()  # TODO(PSz): raise an exception
 
     def parse(self, pem):
         certs = pem_to_certs(pem)
@@ -95,7 +95,7 @@ class MSC(EECert):
         policy_pem = certs_to_pem([self.policy_binding])
         return b"".join([chain_pem, policy_pem])
 
-    def _verify_msc_integrity(self):
+    def validate(self):
         # Skip the policy binding (the last element)
         pem = CERT_SEP.join(self.pem.split(CERT_SEP)[:-1])
         # Generate policy binding from the pem
@@ -121,6 +121,8 @@ class SCP(EECert):
     """
     def __init__(self, pem):
         self.policy = None
+        self.domain_name = None
+        self.version = None
         super().__init__(pem)
 
     def parse(self, pem):
@@ -141,6 +143,12 @@ class SCP(EECert):
                 self.chains.insert(0, chain)
                 chain = []
         assert not chain  # TODO(PSz): unterminated chain, raise an exception
+
+    def get_version(self):
+        return self.policy[PolicyFields.VERSION]
+
+    def get_domain_name(self):
+        return get_cn(self.chains[0][0])
 
     def __repr__(self):
         tmp = ["SCP\n"]
