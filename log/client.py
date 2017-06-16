@@ -25,6 +25,7 @@ from pki.lib.tree_entries import (
     SCPEntry,
     )
 from pki.log.msg import *
+from pki.log.server import PUB_KEY
 
 from lib.tcp.socket import SCIONTCPSocket
 from lib.packet.host_addr import haddr_parse
@@ -38,8 +39,10 @@ class LogClient(object):
     def __init__(self, addr):
         self.addr = addr
         self.sock = SCIONTCPSocket()
+        self.pub_key = None  # Log's public key
 
-    def connect(self, src_addr):
+    def connect(self, src_addr, pub_key):
+        self.pub_key = pub_key
         self.sock.bind((self.addr, 0))
         path_info = self.get_paths_info(src_addr.isd_as)
         if path_info:
@@ -87,28 +90,42 @@ class LogClient(object):
         req = AddMsg.from_values(entry)
         self.send_msg(req)
         msg = self.recv_msg()
-        print(msg)
-        assert isinstance(msg, AcceptMsg)
-        # FIXME(PSz): app should validate that
-        # hash_ = hash_function(obj.pack()).digest()
-        # if  hash_ != msg.hash:
-        #     logging.error("Incorrect hashes: %s != %s" % (hash_, msg.hash))
-        #     return None
+        if isinstance(msg, AcceptMsg):
+            if not msg.validate(self.pub_key):
+                raise EEPKIValidationError("Signature incorrect")
+            # TODO(PSz): check freshness here?
+            hash_ = hash_function(obj.pack()).digest()
+            if  hash_ != msg.hash:
+                raise EEPKIError("Incorrect hashes: %s != %s" % (hash_, msg.hash))
+        elif isinstance(msg, ErrorMsg):
+            raise EEPKIError(msg.description)
+        else:
+            raise EEPKIError("Unsupported response")
         return msg
 
     def get_root(self):
         req = SignedRoot()
         self.send_msg(req)
         msg = self.recv_msg()
-        assert isinstance(msg, SignedRoot)
+        if isinstance(msg, SignedRoot):
+            if not msg.validate(self.pub_key):
+                raise EEPKIValidationError("Signature incorrect")
+            # TODO(PSz): check freshness here?
+        elif isinstance(msg, ErrorMsg):
+            raise EEPKIError(msg.description)
+        else:
+            raise EEPKIError("Unsupported response")
         return msg
 
     def get_update(self, entry_from, entry_to):
         req = UpdateMsg.from_values(entry_from, entry_to)
         self.send_msg(req)
         msg = self.recv_msg()
-        assert isinstance(msg, UpdateMsg)
-        return msg
+        if isinstance(msg, UpdateMsg):
+            return msg
+        elif isinstance(msg, ErrorMsg):
+            raise EEPKIError(msg.description)
+        raise EEPKIError("Unsupported response")
 
 
 if __name__ == "__main__":
@@ -120,4 +137,5 @@ if __name__ == "__main__":
     srv_addr = SCIONAddr.from_values(ISD_AS(sys.argv[3]), haddr_parse(1, sys.argv[4]))
     # start client
     cli = LogClient(cli_addr)
-    cli.connect(srv_addr)
+    cli.connect(srv_addr, PUB_KEY)
+    print(cli.get_root())

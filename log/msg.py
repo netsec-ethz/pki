@@ -37,9 +37,13 @@ class Message(object):
     def pack(self):
         return {MF.TYPE: self.TYPE}
 
-    def pack_full(self):  # Consistency with SCION
+    def pack_full(self):  # Use for transport (consistent with SCION's control plane)
         raw = self.pack()
         return struct.pack("!I", len(raw)) + raw
+
+    def __str__(self):
+        return '%s(%s)' % (type(self).__name__,
+                           ', '.join('%s=%s' % item for item in vars(self).items()))
 
 
 class SignedMessage(Message):
@@ -238,10 +242,12 @@ class SignedRoot(SignedMessage):
     Used for querying and returning signed roots.
     """
     TYPE = MF.SIGNED_ROOT
+    ROOT_IDX = "root_idx"
     def __init__(self, raw=None):
         self.root = None
         self.timestamp = None
         self.entries_no = None
+        self.root_idx = None
         self.signature = None
         super().__init__(raw)
 
@@ -255,19 +261,23 @@ class SignedRoot(SignedMessage):
             self.entries_no = dict_[MF.ENTRIES_NO]
         if MF.SIGNATURE in dict_:
             self.signature = dict_[MF.SIGNATURE]
+        if self.ROOT_IDX in dict_:
+            self.root_idx = dict_[self.ROOT_IDX]
 
     def pack(self):
         dict_ = super().pack()
         dict_[MF.ROOT] = self.root
         dict_[MF.TIMESTAMP] = self.timestamp
         dict_[MF.ENTRIES_NO] = self.entries_no
+        dict_[self.ROOT_IDX] = self.root_idx
         dict_[MF.SIGNATURE] = self.signature
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(cls, root, entries_no, priv_key):
+    def from_values(cls, root, root_idx, entries_no, priv_key):
         inst = cls()
         inst.root = root
+        inst.root_idx = root_idx
         inst.entries_no = entries_no
         inst.timestamp = int(time.time())
         inst.sign(priv_key)
