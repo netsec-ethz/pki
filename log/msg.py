@@ -37,9 +37,13 @@ class Message(object):
     def pack(self):
         return {MF.TYPE: self.TYPE}
 
-    def pack_full(self):  # Consistency with SCION
+    def pack_full(self):  # Use for transport (consistent with SCION's control plane)
         raw = self.pack()
         return struct.pack("!I", len(raw)) + raw
+
+    def __str__(self):
+        return '%s(%s)' % (type(self).__name__,
+                           ', '.join('%s=%s' % item for item in vars(self).items()))
 
 
 class SignedMessage(Message):

@@ -123,11 +123,13 @@ class LogServer(EEPKIElement):
 
     @try_lock
     def handle_add_scp(self, scp, meta):
+        print("try to add scp for %s" % scp.get_domain_name())
         err = self.validate_scp(scp)
         if err:
             msg = ErrorMsg.from_values(err)
             self.send_meta(msg, meta)
             return
+        print("added scp for %s" % scp.get_domain_name())
         self.scps_to_add.append(scp)
         self.accept(scp, meta)
 
