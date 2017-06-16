@@ -120,3 +120,4 @@ if __name__ == "__main__":
     # start client
     cli = LogClient(cli_addr)
     cli.connect(srv_addr)
+    print(cli.get_root())

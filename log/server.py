@@ -44,12 +44,15 @@ from lib.util import sleep_interval
 
 def try_lock(handler):
     def wrapper(inst, obj, meta):
-        # When log is under an update
-        if not inst.lock.acquire(blocking=False):
-            inst.handle_error(meta, "Service temporarily unavailable")
-            return
-        handler(inst, obj, meta)
-        inst.lock.release()
+        # TODO(PSz): for now just wait when log is under an update (can be optimized
+        # with computing log in the memory and replacing the instance)
+        with inst.lock:
+            handler(inst, obj, meta)
+        # if not inst.lock.acquire(blocking=False):
+        #     inst.handle_error(meta, "Service temporarily unavailable")
+        #     return
+        # handler(inst, obj, meta)
+        # inst.lock.release()
     return wrapper
 
 
@@ -66,7 +69,7 @@ class LogServer(EEPKIElement):
         self.mscs_to_add = []
         self.scps_to_add = []
         self.revs_to_add = []
-        self.signed_root = None
+        self.signed_roots = []
         self.update_root()
         # Init network
         super().__init__(addr)
@@ -76,7 +79,8 @@ class LogServer(EEPKIElement):
 
     def update_root(self):
         root, entries_no = self.log.get_root_entries()
-        self.signed_root = SignedRoot.from_values(root, entries_no, self.priv_key)
+        root_idx = len(self.signed_roots)
+        self.signed_roots.append(SignedRoot.from_values(root, root_idx, entries_no, self.priv_key))
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -101,13 +105,19 @@ class LogServer(EEPKIElement):
         else:
             self.handle_error(meta, "No handler for request")
 
-    def handle_error(self, meta, desc):
+    def handle_error(self, desc, meta):
         msg = ErrorMsg.from_values(desc)
         self.send_meta(msg, meta)
 
     @try_lock
     def handle_root_request(self, msg, meta):
-        self.send_meta(meta, self.signed_root.pack())
+        idx = msg.root_idx
+        if idx is None:
+            idx = -1
+        try:
+            self.send_meta(self.signed_roots[idx], meta)
+        except IndexError:
+            self.handle_error("No root for index %d" % idx, meta)
 
     @try_lock
     def handle_proof_request(self, msg, meta):
