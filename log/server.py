@@ -41,6 +41,9 @@ from lib.packet.scion_addr import ISD_AS, SCIONAddr
 from lib.thread import thread_safety_net
 from lib.util import sleep_interval
 
+PRIV_KEY = b']\xc1\xdc\x07o\x0c\xa2(\x95JA\xdc\xcd\x9ez\xc2!\xd2\x82\xe0cK?\xf2X\xb1H\xe7\xcf\xf7\xad\xf4'
+PUB_KEY = b'\xfd\xd99\xb3\x9e-\xa4%1\x80H\x9c\xd72?\xb1tCW;\xa1\x1b_o\xf8\xe8\xcf\xca\xdb\x0b>\x12'
+
 
 def try_lock(handler):
     def wrapper(inst, obj, meta):
@@ -49,7 +52,7 @@ def try_lock(handler):
         with inst.lock:
             handler(inst, obj, meta)
         # if not inst.lock.acquire(blocking=False):
-        #     inst.handle_error(meta, "Service temporarily unavailable")
+        #     inst.handle_error("Service temporarily unavailable", meta)
         #     return
         # handler(inst, obj, meta)
         # inst.lock.release()
@@ -61,8 +64,8 @@ class LogServer(EEPKIElement):
     def __init__(self, addr):
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
         # Init log
-        self.priv_key = b']\xc1\xdc\x07o\x0c\xa2(\x95JA\xdc\xcd\x9ez\xc2!\xd2\x82\xe0cK?\xf2X\xb1H\xe7\xcf\xf7\xad\xf4'
-        self.pub_key = b'\xfd\xd99\xb3\x9e-\xa4%1\x80H\x9c\xd72?\xb1tCW;\xa1\x1b_o\xf8\xe8\xcf\xca\xdb\x0b>\x12'
+        self.priv_key = PRIV_KEY
+        self.pub_key = PUB_KEY
         entries = self.init_db()
         self.log = Log(entries)
         self.lock = threading.Lock()

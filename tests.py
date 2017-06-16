@@ -30,7 +30,7 @@ from pki.lib.defines import EEPKIError, SecLevel, ValidationResult
 from pki.lib.cert import MSC, SCP
 from pki.log.log import Log
 from pki.log.client import LogClient
-from pki.log.server import LogServer
+from pki.log.server import LogServer, PUB_KEY
 from pki.lib.verifier import verify
 from pki.lib.x509 import certs_to_pem, pem_to_certs
 from pki.lib.trees import *
@@ -182,7 +182,7 @@ def test_cli_srv(mscs, scps):
     # threading.Thread(target=log_serv.run, name="LogServer", daemon=True).start()
     cli = LogClient(cli_addr)
     time.sleep(1)
-    cli.connect(srv_addr)
+    cli.connect(srv_addr, PUB_KEY)
     print("Log started and client connected")
     all_ = scps + mscs
     random.shuffle(all_)
