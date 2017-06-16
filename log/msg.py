@@ -50,7 +50,8 @@ class SignedMessage(Message):
     def validate(self, pub_key):
         inst = copy.copy(self)
         inst.signature = b""
-        return verify(inst.pack(), self.signature, pub_key)
+        if not verify(inst.pack(), self.signature, pub_key):
+            raise EEPKIValidationError("Incorrect signature")
 
     def sign(self, priv_key):
         inst = copy.copy(self)
