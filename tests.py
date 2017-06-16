@@ -12,8 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import sys
 import copy
+import glob
 import random
 import string
 import threading
@@ -23,6 +25,7 @@ from collections import defaultdict
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
+from pki.generate import OUTPUT_DIR
 from pki.lib.defines import EEPKIError, SecLevel, ValidationResult
 from pki.lib.cert import MSC, SCP
 from pki.log.log import Log
@@ -186,34 +189,48 @@ def test_cli_srv(mscs, scps):
     for obj in all_:
         print(cli.submit(obj))
 
+def load_mscs_scps():
+    mscs = {}
+    scps = {}
+    os.chdir(OUTPUT_DIR)
+    for name in glob.glob("*.msc"):
+        domain_name = name[:-4]
+        # Load MSC
+        with open(name, "rb") as f:
+            pem = f.read()
+        msc = MSC(MSC(pem).pack())
+        mscs[domain_name] = msc
+        assert msc.pack() == pem, "parse()/pack() failed"
+        # and corresponding SCP
+        with open(domain_name + ".scp", "rb") as f:
+            pem = f.read()
+        scp = SCP(SCP(pem).pack())
+        scps[domain_name] = scp
+        assert scp.pack() == pem, "parse()/pack() failed"
+    return mscs, scps
+
 
 if __name__ == "__main__":
     # PYTHONPATH=..:../scion ./tests.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc
-    if len(sys.argv) != 4:
-        print("%s <MSC> <SCP> <TRC>" % sys.argv[0])
+    if len(sys.argv) != 2:
+        print("%s <TRC>" % sys.argv[0])
         sys.exit(-1)
-    # Create a MSC and SCP and test basic parsing and packing
-    with open(sys.argv[1], "rb") as f:
-        pem = f.read()
-    msc = MSC(MSC(pem).pack())
-    assert msc.pack() == pem, "parse()/pack() failed"
-
-    with open(sys.argv[2], "rb") as f:
-        pem = f.read()
-    scp = SCP(SCP(pem).pack())
-    assert scp.pack() == pem, "parse()/pack() failed"
-
-    with open(sys.argv[3], "r") as f:
+    with open(sys.argv[1], "r") as f:
         trc = TRC.from_raw(f.read())
-    # Verify MSC
-    verifier(msc, scp, trc, "a.com")
-    # Test basic packing and parsing
-    test_pack_parse(msc, scp)
-    # Prepare lists of MSCs and SCPs
-    mscs, scps = prepare(msc, scp)
+    # Load generated objects
+    mscs, scps = load_mscs_scps()
+    for domain_name in mscs:
+        msc = mscs[domain_name]
+        scp = scps[domain_name]
+        # Verify MSC
+        verifier(msc, scp, trc, domain_name)
+        # Test basic packing and parsing
+        test_pack_parse(msc, scp)
+    mscsl = list(mscs.values())
+    scpsl = list(scps.values())
     # Test log operations
-    log = test_log_local(mscs, scps)
+    log = test_log_local(mscsl, scpsl)
     # Test proofs
-    test_proofs(log, mscs, scps)
+    test_proofs(log, mscsl, scpsl)
     # Test log with network
-    test_cli_srv(mscs, scps)
+    test_cli_srv(mscsl, scpsl)
