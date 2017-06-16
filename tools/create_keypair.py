@@ -33,7 +33,6 @@ def gen_keypair(name):
         pem = public_key.public_bytes(encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo)
         f.write(pem)
-    print("%s.{key,pub} created" % name)
 
 
 if __name__ == "__main__":

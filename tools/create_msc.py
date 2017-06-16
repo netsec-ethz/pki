@@ -35,7 +35,6 @@ def gen_msc(argv):
     pem += create_x509cert(domain_name, pubkey, None, policy_privkey, exts=[binding])
     with open("%s.msc" % domain_name, "w") as f:
         f.write(pem.decode('utf-8'))
-    print("%s.msc created" % domain_name)
 
 
 if __name__ == "__main__":

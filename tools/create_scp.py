@@ -32,7 +32,6 @@ def gen_scp(argv):
         i += 2
     with open("%s.scp" % domain_name, "w") as f:
         f.write(pem.decode('utf-8'))
-    print("%s.scp created" % domain_name)
 
 
 if __name__ == "__main__":

@@ -12,10 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Generate scion config and create a symlink to CA store and TRC, e.g.,:
-# ln -s ~/path_to/scion/gen/CAS/ISD1/
-# ln -s ~/path_to/scion/gen/ISD1/AS11/bs1-11-1/certs/ISD1-V0.trc
 import os
 import random
 import string
@@ -52,6 +48,7 @@ def random_domain_names(level=3, per_level=2, length=2):
 
 def gen_all(level=5):
     os.chdir(OUTPUT_DIR)
+    os.system("rm *.msc *.scp *.key *.pub")
     for domain_name in random_domain_names(level):
         # Generate keypairs
         gen_keypair(domain_name + "-scp")
@@ -65,6 +62,10 @@ def gen_all(level=5):
         # Generate SCP
         argv = [domain_name, scp_pub, POLICY_FILE] + SCP_CAS
         gen_scp(argv)
+        print("Generated keys and certs for %s" % domain_name)
 
+# Generate scion config and create a symlink to CA store and TRC, e.g.,:
+# ln -s ~/path_to/scion/gen/CAS/ISD1/
+# ln -s ~/path_to/scion/gen/ISD1/AS11/bs1-11-1/certs/ISD1-V0.trc
 if __name__ == "__main__":
     gen_all(5)
