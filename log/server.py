@@ -43,12 +43,12 @@ from lib.util import sleep_interval
 
 
 def try_lock(handler):
-    def wrapper(inst, meta, obj):
+    def wrapper(inst, obj, meta):
         # When log is under an update
         if not inst.lock.acquire(blocking=False):
             inst.handle_error(meta, "Service temporarily unavailable")
             return
-        handler(inst, meta, obj)
+        handler(inst, obj, meta)
         inst.lock.release()
     return wrapper
 
@@ -56,6 +56,7 @@ def try_lock(handler):
 class LogServer(EEPKIElement):
     UPDATE_INTERVAL = 10  # FIXME(PSz): so low for testing
     def __init__(self, addr):
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
         # Init log
         self.priv_key = b']\xc1\xdc\x07o\x0c\xa2(\x95JA\xdc\xcd\x9ez\xc2!\xd2\x82\xe0cK?\xf2X\xb1H\xe7\xcf\xf7\xad\xf4'
         self.pub_key = b'\xfd\xd99\xb3\x9e-\xa4%1\x80H\x9c\xd72?\xb1tCW;\xa1\x1b_o\xf8\xe8\xcf\xca\xdb\x0b>\x12'
@@ -123,13 +124,11 @@ class LogServer(EEPKIElement):
 
     @try_lock
     def handle_add_scp(self, scp, meta):
-        print("try to add scp for %s" % scp.get_domain_name())
         err = self.validate_scp(scp)
         if err:
             msg = ErrorMsg.from_values(err)
             self.send_meta(msg, meta)
             return
-        print("added scp for %s" % scp.get_domain_name())
         self.scps_to_add.append(scp)
         self.accept(scp, meta)
 
@@ -139,12 +138,15 @@ class LogServer(EEPKIElement):
         """
         # Check whether this SCP is a subsequent (or the first) one
         label = scp.get_domain_name()
+        latest = None
         for tmp in reversed(self.scps_to_add):
             if tmp.get_domain_name() == label:
                 latest = tmp
                 break
         else:
-            latest = self.log.policy_tree.get_entry(label)
+            scpe = self.log.policy_tree.get_entry(label)
+            if scpe:
+                latest = scpe.scp
         if not latest and scp.get_version() != 1:
             return "First SCP is missing"
         if latest:
