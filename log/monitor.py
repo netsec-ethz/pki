@@ -15,5 +15,42 @@ import logging
 
 from .log import Log
 
-class LogMonitor(object):
-    pass
+LOGS2ADDR
+
+class LogMonitor(EEPKIElement):
+    def __init__(self, addr):
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
+        # Init logs
+        self.init_logs()
+        # Init network
+        super().__init__(addr)
+
+    def init_logs(self):
+        self.logs = {}  # log_id -> Log()
+        self.log2lock = {}
+        self.signed_roots = {}
+
+    def handle_msg_meta(self, msg, meta):
+        """
+        Main routine to handle incoming SCION messages.
+        """
+        if isinstance(msg, SignedRoot):
+            self.handle_root(msg, meta)
+        elif isinstance(msg, UpdateMsg):
+            self.handle_update(msg, meta)
+        elif isinstance(msg, AddMsg):
+            # FIXME(PSz): adding *Entry instances may be cleaner
+            if isinstance(msg.entry, SCPEntry):
+                self.handle_add_scp(msg.entry.scp, meta)
+            elif isinstance(msg.entry, MSCEntry):
+                self.handle_add_msc(msg.entry.msc, meta)
+            elif isinstance(msg.entry, RevocationEntry):
+                self.handle_add_rev(msg.entry.rev, meta)
+            else:
+                self.handle_error(meta, "No handler for entry")
+        else:
+            self.handle_error(meta, "No handler for request")
+
+    def handle_error(self, desc, meta):
+        msg = ErrorMsg.from_values(desc)
+        self.send_meta(msg, meta)

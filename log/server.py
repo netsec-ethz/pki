@@ -64,6 +64,7 @@ class LogServer(EEPKIElement):
     def __init__(self, addr):
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
         # Init log
+        self.log_id = "log1"
         self.priv_key = PRIV_KEY
         self.pub_key = PUB_KEY
         entries = self.init_db()
@@ -83,7 +84,8 @@ class LogServer(EEPKIElement):
     def update_root(self):
         root, entries_no = self.log.get_root_entries()
         root_idx = len(self.signed_roots)
-        self.signed_roots.append(SignedRoot.from_values(root, root_idx, entries_no, self.priv_key))
+        self.signed_roots.append(SignedRoot.from_values(root, root_idx, entries_no,
+                                                        self.log_id, self.priv_key))
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -133,6 +135,7 @@ class LogServer(EEPKIElement):
     @try_lock
     def handle_update_request(self, msg, meta):
         msg.entries = self.log.cons_tree.entries[msg.entry_from:msg.entry_to]
+        msg.log_id = self.log_id
         self.send_meta(msg, meta)
 
     @try_lock
