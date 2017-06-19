@@ -63,7 +63,7 @@ class LogMonitor(EEPKIElement):
             self.send_error(meta, "No handler for request: %s" % msg)
 
     def handle_error(self, msg, meta):
-        logging.error(msg)
+        logging.error("Received: %s" % msg)
 
     def send_error(self, desc, meta):
         msg = ErrorMsg.from_values(desc)
