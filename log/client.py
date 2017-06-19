@@ -91,8 +91,7 @@ class LogClient(object):
         self.send_msg(req)
         msg = self.recv_msg()
         if isinstance(msg, AcceptMsg):
-            if not msg.validate(self.pub_key):
-                raise EEPKIValidationError("Signature incorrect")
+            msg.validate(self.pub_key)
             # TODO(PSz): check freshness here?
             hash_ = hash_function(obj.pack()).digest()
             if  hash_ != msg.hash:
@@ -108,8 +107,7 @@ class LogClient(object):
         self.send_msg(req)
         msg = self.recv_msg()
         if isinstance(msg, SignedRoot):
-            if not msg.validate(self.pub_key):
-                raise EEPKIValidationError("Signature incorrect")
+            msg.validate(self.pub_key)
             # TODO(PSz): check freshness here?
         elif isinstance(msg, ErrorMsg):
             raise EEPKIError(msg.description)

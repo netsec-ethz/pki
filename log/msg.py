@@ -43,14 +43,29 @@ class Message(object):
 
     def __str__(self):
         return '%s(%s)' % (type(self).__name__,
-                           ', '.join('%s=%s' % item for item in vars(self).items()))
+                           ', '.join('%s=%s' % item for item in sorted(vars(self).items())))
+
+    def __eq__(self, other):
+        return self.pack() == other.pack()
 
 
 class SignedMessage(Message):
+    def __init__(self, raw=None):
+        self.signature = None
+        if raw:
+            self.parse(raw)
+
+    def parse(self, raw):
+        dict_ = super().parse(raw)
+        if MF.SIGNATURE in dict_:
+            self.signature = dict_[MF.SIGNATURE]
+        return dict_
+
     def validate(self, pub_key):
         inst = copy.copy(self)
         inst.signature = b""
-        return verify(inst.pack(), self.signature, pub_key)
+        if not verify(inst.pack(), self.signature, pub_key):
+            raise EEPKIValidationError("Incorrect signature")
 
     def sign(self, priv_key):
         inst = copy.copy(self)
@@ -111,7 +126,6 @@ class AcceptMsg(SignedMessage):
     def __init__(self, raw=None):
         self.hash = None
         self.timestamp = None
-        self.signature = None
         super().__init__(raw)
 
     def parse(self, raw):
@@ -122,9 +136,6 @@ class AcceptMsg(SignedMessage):
         if MF.TIMESTAMP not in dict_ or not dict_[MF.TIMESTAMP]:
             raise EEPKIParseError("Incomplete message")
         self.timestamp = dict_[MF.TIMESTAMP]
-        if MF.SIGNATURE not in dict_ or not dict_[MF.SIGNATURE]:
-            raise EEPKIParseError("Incomplete message")
-        self.signature = dict_[MF.SIGNATURE]
 
     def pack(self):
         dict_ = super().pack()
@@ -148,10 +159,12 @@ class UpdateMsg(Message):
     When queried self.entries is empty.
     """
     TYPE = MF.UPDATE_MSG
+    LOG_ID = "log_id"
     def __init__(self, raw=None):
         self.entry_from = None
         self.entry_to = None
         self.entries = []
+        self.log_id = None
         super().__init__(raw)
 
     def parse(self, raw):
@@ -163,13 +176,15 @@ class UpdateMsg(Message):
             self.entry_to = int(dict_[MF.ENTRY_TO])
         except TypeError:
             raise EEPKIParseError("Incorrect message")
-
+        if self.LOG_ID in dict_:
+            self.log_id = dict_[self.LOG_ID]
         if MF.ENTRIES in dict_:
             for raw_entry in dict_[MF.ENTRIES]:
                 self.entries.append(build_entry(raw_entry))
 
     def pack(self):
         dict_ = super().pack()
+        dict_[self.LOG_ID] = self.log_id
         if self.entry_from is None or self.entry_to is None:
             raise EEPKIParseError("Cannot pack")
         dict_[MF.ENTRY_FROM] = self.entry_from
@@ -243,12 +258,13 @@ class SignedRoot(SignedMessage):
     """
     TYPE = MF.SIGNED_ROOT
     ROOT_IDX = "root_idx"
+    LOG_ID = "log_id"
     def __init__(self, raw=None):
         self.root = None
         self.timestamp = None
         self.entries_no = None
         self.root_idx = None
-        self.signature = None
+        self.log_id = None
         super().__init__(raw)
 
     def parse(self, raw):
@@ -259,10 +275,10 @@ class SignedRoot(SignedMessage):
             self.timestamp = dict_[MF.TIMESTAMP]
         if MF.ENTRIES_NO in dict_:
             self.entries_no = dict_[MF.ENTRIES_NO]
-        if MF.SIGNATURE in dict_:
-            self.signature = dict_[MF.SIGNATURE]
         if self.ROOT_IDX in dict_:
             self.root_idx = dict_[self.ROOT_IDX]
+        if self.LOG_ID in dict_:
+            self.log_id = dict_[self.LOG_ID]
 
     def pack(self):
         dict_ = super().pack()
@@ -271,19 +287,51 @@ class SignedRoot(SignedMessage):
         dict_[MF.ENTRIES_NO] = self.entries_no
         dict_[self.ROOT_IDX] = self.root_idx
         dict_[MF.SIGNATURE] = self.signature
+        dict_[self.LOG_ID] = self.log_id
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(cls, root, root_idx, entries_no, priv_key):
+    def from_values(cls, root, root_idx, entries_no, log_id, priv_key):
         inst = cls()
         inst.root = root
         inst.root_idx = root_idx
         inst.entries_no = entries_no
+        inst.log_id = log_id
         inst.timestamp = int(time.time())
         inst.sign(priv_key)
         return inst
 
 
+class RootConfirm(SignedMessage):
+    """
+    Used for querying and returning monitor confirmations.
+    """
+    TYPE = MF.ROOT_CONFIRM
+    SIGNED_ROOT = "signed_root"
+    def __init__(self, raw=None):
+        self.signed_root = None
+        super().__init__(raw)
+
+    def parse(self, raw):
+        dict_ = super().parse(raw)
+        if self.SIGNED_ROOT not in dict_:
+            raise EEPKIParseError("Incomplete message")
+        self.signed_root = SignedRoot(dict_[self.SIGNED_ROOT])
+
+    def pack(self):
+        dict_ = super().pack()
+        if self.signed_root:
+            dict_[self.SIGNED_ROOT] = self.signed_root.pack()
+        return obj_to_bin(dict_)
+
+    @classmethod
+    def from_values(cls, signed_root, priv_key):
+        inst = cls()
+        inst.signed_root = signed_root
+        inst.sign(priv_key)
+        return inst
+
+
 def build_msg(raw):
-    classes = [ErrorMsg, AddMsg, AcceptMsg, UpdateMsg, ProofMsg, SignedRoot]
+    classes = [ErrorMsg, AddMsg, AcceptMsg, UpdateMsg, ProofMsg, SignedRoot, RootConfirm]
     return build_obj(raw, classes)

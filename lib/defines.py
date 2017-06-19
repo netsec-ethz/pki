@@ -140,6 +140,7 @@ class MsgFields(object):
     GET_UPDATE_MSG = "get_update_msg"
     UPDATE_MSG = "update_msg"
     PROOF_MSG = "proof_msg"
+    ROOT_CONFIRM = "root_confirm"
     # Message fields
     SIGNATURE = "signature"
     DESCRIPTION = "description"

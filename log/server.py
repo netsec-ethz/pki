@@ -52,7 +52,7 @@ def try_lock(handler):
         with inst.lock:
             handler(inst, obj, meta)
         # if not inst.lock.acquire(blocking=False):
-        #     inst.handle_error("Service temporarily unavailable", meta)
+        #     inst.send_error("Service temporarily unavailable", meta)
         #     return
         # handler(inst, obj, meta)
         # inst.lock.release()
@@ -64,6 +64,7 @@ class LogServer(EEPKIElement):
     def __init__(self, addr):
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
         # Init log
+        self.log_id = "log1"
         self.priv_key = PRIV_KEY
         self.pub_key = PUB_KEY
         entries = self.init_db()
@@ -83,7 +84,8 @@ class LogServer(EEPKIElement):
     def update_root(self):
         root, entries_no = self.log.get_root_entries()
         root_idx = len(self.signed_roots)
-        self.signed_roots.append(SignedRoot.from_values(root, root_idx, entries_no, self.priv_key))
+        self.signed_roots.append(SignedRoot.from_values(root, root_idx, entries_no,
+                                                        self.log_id, self.priv_key))
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -104,11 +106,11 @@ class LogServer(EEPKIElement):
             elif isinstance(msg.entry, RevocationEntry):
                 self.handle_add_rev(msg.entry.rev, meta)
             else:
-                self.handle_error(meta, "No handler for entry")
+                self.send_error(meta, "No handler for entry")
         else:
-            self.handle_error(meta, "No handler for request")
+            self.send_error(meta, "No handler for request")
 
-    def handle_error(self, desc, meta):
+    def send_error(self, desc, meta):
         msg = ErrorMsg.from_values(desc)
         self.send_meta(msg, meta)
 
@@ -120,7 +122,7 @@ class LogServer(EEPKIElement):
         try:
             self.send_meta(self.signed_roots[idx], meta)
         except IndexError:
-            self.handle_error("No root for index %d" % idx, meta)
+            self.send_error("No root for index %d" % idx, meta)
 
     @try_lock
     def handle_proof_request(self, msg, meta):
@@ -133,6 +135,7 @@ class LogServer(EEPKIElement):
     @try_lock
     def handle_update_request(self, msg, meta):
         msg.entries = self.log.cons_tree.entries[msg.entry_from:msg.entry_to]
+        msg.log_id = self.log_id
         self.send_meta(msg, meta)
 
     @try_lock
