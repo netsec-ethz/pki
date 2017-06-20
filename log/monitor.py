@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import sys
 import threading
+import time
 
-from pki.defines import EEPKI_PORT
+from pki.lib.defines import EEPKI_PORT
+from pki.log.elem import EEPKIElement
 from pki.log.log import Log
 from pki.log.msg import (
     ErrorMsg,
@@ -22,24 +25,35 @@ from pki.log.msg import (
     SignedRoot,
     UpdateMsg,
 )
+from pki.lib.tree_entries import (
+    MSCEntry,
+    RevocationEntry,
+    RootsEntry,
+    SCPEntry,
+    )
 
 # SCION
 from lib.crypto.trc import TRC
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
+from lib.thread import thread_safety_net
+from lib.util import sleep_interval
 
-MONITOR_INTERVAL = 1.0
 
 class LogMonitor(EEPKIElement):
+    MONITOR_INTERVAL = 2
     def __init__(self, addr):
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
+        self.my_id = "monitor1"
+        self.pub_key = b'5w\x9c\xb6\xa1\xef\x8a\x95\xfd\x8d\xd6\x9bd\xbd\x1a\x9aN\r\xcaj6i=\xe2\xb1\xbe\xad\xe9\xad\x94\xc1\x00'
+        self.priv_key = b"H\x05\xa7\x1b\xe7t\xdfF\xd4\xe6\xb67\x8a'#\x13\x1cc\xa2\xf4\xccI\xffU\xe1-W\xc8>.\x08\x94"
         # Init logs
         self.log2addr = {}
         self.logs = {}
         self.log2lock = {}
         self.log2key = {}
         self.signed_roots = {}
-        self.synced_roots = {}
+        self.confirmed_roots = {}
         self.init_logs()
         # Init network
         super().__init__(addr)
@@ -47,13 +61,13 @@ class LogMonitor(EEPKIElement):
     def init_logs(self):
         # TODO(PSz): read from TRC
         addr = SCIONAddr.from_values(ISD_AS("1-17"), haddr_parse(1, "127.1.1.1"))
-        self.log2addr = {'log1': addr}
+        self.log2addr = {"log1": addr}
         for log_id in self.log2addr:
             self.logs[log_id] = Log()
             self.log2lock[log_id] = threading.Lock()
             self.log2key[log_id] = b'\xfd\xd99\xb3\x9e-\xa4%1\x80H\x9c\xd72?\xb1tCW;\xa1\x1b_o\xf8\xe8\xcf\xca\xdb\x0b>\x12'
             self.signed_roots[log_id] = {}
-            self.synced_roots[log_id] = {}
+            self.confirmed_roots[log_id] = {}
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -87,7 +101,7 @@ class LogMonitor(EEPKIElement):
             logging.critical("Inconsistent roots: %s\n%s" % msg, self.signed_roots[log_id][idx])
             return
         self.signed_roots[log_id][idx] = msg
-        self.synced_roots[log_id][idx] = False
+        logging.debug("Received root: %s" % msg)
         self.sync_log(log_id, meta)
 
     def sync_log(self, log_id, meta):
@@ -97,15 +111,14 @@ class LogMonitor(EEPKIElement):
         missing = range(min_, max_ + 1) - self.signed_roots[log_id].keys()
         for idx in missing:
             self.ask_root(meta, idx)
-        if missing: # Wait for roots before syncying content
+        if missing: # Wait for roots before syncing content
             return
-        # Ask for update
-        for idx in sorted(self.signed_roots[log_id].keys()):
-            if not self.synced_roots[log_id][idx]:
-                self.ask_update(meta, root)
-                break
-        else:
+        # Ask for update of the first nonsynced root
+        root = self.first_nonsync_root(log_id)
+        if not root:
             logging.debug("Log: %s is up to date" % log_id)
+            return
+        self.ask_update(meta, root)
 
     def ask_root(self, meta, idx=None):
         req = SignedRoot()
@@ -113,13 +126,73 @@ class LogMonitor(EEPKIElement):
             req.root_idx = idx
         self.send_meta(req, meta)
 
+    def first_nonsync_root(self, log_id):
+        for idx in sorted(self.signed_roots[log_id].keys()):
+            if idx not in self.confirmed_roots[log_id]:
+                return self.signed_roots[log_id][idx]
+        return None
+
     def ask_update(self, meta, root):
-    """
-    root: the first non-synchronized root
-    """
+        """
+        root: the first non-synchronized root
+        """
+        # TODO(PSz): here some state could limit sending redundant requests
         _, entries = self.logs[root.log_id].get_root_entries()
         req = UpdateMsg.from_values(entries, root.entries_no)
+        logging.debug("Asking for Update: %s" % req)
         self.send_meta(req, meta)
+
+    def handle_update(self, msg, meta):
+        # TODO(PSz): to long, entry matching can be in log's add_entry()
+        log_id = msg.log_id
+        log = self.logs[log_id]
+        # First validate the update
+        _, entries = log.get_root_entries()
+        if entries != msg.entry_from:
+            logging.error("Invalid entry_from in update: %d!=%d" % (entries, msg.entry_from))
+            return  # TODO(PSz): what to do here?
+        root = self.first_nonsync_root(log_id)
+        if not root:
+            logging.error("Updated for synchronized log")
+            return
+        if root.entries_no != msg.entry_to:
+            logging.error("Invalid entry_to in update: %d!=%d" % (root.entries_no, msg.entry_to))
+            return  # TODO(PSz): what to do here?
+        # Check received entries
+        if not msg.entries:
+            logging.error("Empty update")
+            return
+        if not isinstance(msg.entries[-1], RootsEntry):
+            logging.error("The last entry is not RootsEntry")
+            return
+        # Can add entries now
+        for entry in msg.entries:
+            obj = None
+            if isinstance(entry, MSCEntry):
+                obj = entry.msc
+            elif isinstance(entry, SCPEntry):
+                obj = entry.scp
+            elif isinstance(entry, RevocationEntry):
+                obj = entry.rev
+            elif isinstance(entry, RootsEntry):
+                obj = entry
+            else:
+                logging.error("Invalid entry to add: %s" % entry)
+                return
+            # TODO(PSz): pre-validate entries here, similar as log servers do
+            log.add(obj)
+        # Build log
+        log.build(add_re=False)
+        log.get_root_entries()
+        new_root, new_entries = log.get_root_entries()
+        if new_root != root.root:
+            logging.error("Inconsistent roots after log update: %s!=%s" % (new_root, msg.root))
+            return  # TODO(PSz): what to do here? Undo changes and try again?
+        # The log is updated
+        rc = RootConfirm.from_values(root, self.my_id, self.priv_key)
+        self.confirmed_roots[log_id][root.root_idx] = rc
+        logging.debug("log: %s updated" % log_id)
+
 
     def handle_confirm_request(self, msg, meta):
         pass
@@ -127,18 +200,21 @@ class LogMonitor(EEPKIElement):
     def worker(self):
         start = time.time()
         while self.run_flag.is_set():
-            sleep_interval(start, self.MONITOR_INTERVAL, "LogServer.worker sleep",
+            sleep_interval(start, self.MONITOR_INTERVAL, "LogMonitor.worker sleep",
                            self._quiet_startup())
             start = time.time()
             self.ask_for_roots()
 
     def ask_for_roots(self):
-        pass
+        for addr in self.log2addr.values():
+            req = SignedRoot()
+            meta = self._build_meta(addr.isd_as, addr.host, port=EEPKI_PORT, reuse=True)
+            self.send_meta(req, meta)
 
     def run(self):
         threading.Thread(
             target=thread_safety_net, args=(self.worker,),
-            name="LogServer.worker", daemon=True).start()
+            name="LogMonitor.worker", daemon=True).start()
         super().run()
 
 if __name__ == "__main__":

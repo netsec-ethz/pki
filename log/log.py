@@ -13,7 +13,7 @@
 # limitations under the License.
 import logging
 
-from pki.lib.cert import MSC, SCP
+from pki.lib.cert import MSC, Revocation, SCP
 from pki.lib.trees import  CertificateTree, ConsistencyTree, PolicyTree
 from pki.lib.tree_entries import (
     CertificateEntry,
