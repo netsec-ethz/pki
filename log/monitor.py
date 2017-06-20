@@ -34,6 +34,12 @@ class LogMonitor(EEPKIElement):
     def __init__(self, addr):
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
         # Init logs
+        self.log2addr = {}
+        self.logs = {}
+        self.log2lock = {}
+        self.log2key = {}
+        self.signed_roots = {}
+        self.synced_roots = {}
         self.init_logs()
         # Init network
         super().__init__(addr)
@@ -44,8 +50,10 @@ class LogMonitor(EEPKIElement):
         self.log2addr = {'log1': addr}
         for log_id in self.log2addr:
             self.logs[log_id] = Log()
-            self.log2log[log_id] = threading.Lock()
-            self.signed_roots[log_id] = []
+            self.log2lock[log_id] = threading.Lock()
+            self.log2key[log_id] = b'\xfd\xd99\xb3\x9e-\xa4%1\x80H\x9c\xd72?\xb1tCW;\xa1\x1b_o\xf8\xe8\xcf\xca\xdb\x0b>\x12'
+            self.signed_roots[log_id] = {}
+            self.synced_roots[log_id] = {}
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -70,10 +78,48 @@ class LogMonitor(EEPKIElement):
         self.send_meta(msg, meta)
 
     def handle_root(self, msg, meta):
-        pass
+        log_id = msg.log_id
+        if not msg.validate(self.log2key[log_id]):
+            logging.error("Cannot validate: %s" % msg)
+            return
+        idx = msg.root_idx
+        if idx in self.signed_roots[log_id] and msg != self.signed_roots[log_id][idx]:
+            logging.critical("Inconsistent roots: %s\n%s" % msg, self.signed_roots[log_id][idx])
+            return
+        self.signed_roots[log_id][idx] = msg
+        self.synced_roots[log_id][idx] = False
+        self.sync_log(log_id, meta)
 
-    def handle_update(self, msg, meta):
-        pass
+    def sync_log(self, log_id, meta):
+        # First collect intermediate roots (if any is missing)
+        min_ = min(self.signed_roots[log_id].keys())
+        max_ = min(self.signed_roots[log_id].keys())
+        missing = range(min_, max_ + 1) - self.signed_roots[log_id].keys()
+        for idx in missing:
+            self.ask_root(meta, idx)
+        if missing: # Wait for roots before syncying content
+            return
+        # Ask for update
+        for idx in sorted(self.signed_roots[log_id].keys()):
+            if not self.synced_roots[log_id][idx]:
+                self.ask_update(meta, root)
+                break
+        else:
+            logging.debug("Log: %s is up to date" % log_id)
+
+    def ask_root(self, meta, idx=None):
+        req = SignedRoot()
+        if idx is not None:
+            req.root_idx = idx
+        self.send_meta(req, meta)
+
+    def ask_update(self, meta, root):
+    """
+    root: the first non-synchronized root
+    """
+        _, entries = self.logs[root.log_id].get_root_entries()
+        req = UpdateMsg.from_values(entries, root.entries_no)
+        self.send_meta(req, meta)
 
     def handle_confirm_request(self, msg, meta):
         pass
