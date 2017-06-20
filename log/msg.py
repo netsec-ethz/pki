@@ -66,6 +66,7 @@ class SignedMessage(Message):
         inst.signature = b""
         if not verify(inst.pack(), self.signature, pub_key):
             raise EEPKIValidationError("Incorrect signature")
+        return True
 
     def sign(self, priv_key):
         inst = copy.copy(self)
@@ -157,6 +158,9 @@ class UpdateMsg(Message):
     """
     Used for querying and returning updates.
     When queried self.entries is empty.
+
+    PSz: hash of that message could be signed by a log on every update. Then monitors have
+    easier job to manage updates.
     """
     TYPE = MF.UPDATE_MSG
     LOG_ID = "log_id"
@@ -308,8 +312,10 @@ class RootConfirm(SignedMessage):
     """
     TYPE = MF.ROOT_CONFIRM
     SIGNED_ROOT = "signed_root"
+    MONITOR_ID = "monitor_id"
     def __init__(self, raw=None):
         self.signed_root = None
+        self.monitor_id = None
         super().__init__(raw)
 
     def parse(self, raw):
@@ -317,17 +323,22 @@ class RootConfirm(SignedMessage):
         if self.SIGNED_ROOT not in dict_:
             raise EEPKIParseError("Incomplete message")
         self.signed_root = SignedRoot(dict_[self.SIGNED_ROOT])
+        if self.MONITOR_ID in dict_:
+            self.monitor_id = dict_[self.MONITOR_ID]
 
     def pack(self):
         dict_ = super().pack()
         if self.signed_root:
             dict_[self.SIGNED_ROOT] = self.signed_root.pack()
+        if self.monitor_id is not None:
+            dict_[self.MONITOR_ID] = self.monitor_id
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(cls, signed_root, priv_key):
+    def from_values(cls, signed_root, monitor_id, priv_key):
         inst = cls()
         inst.signed_root = signed_root
+        inst.monitor_id = monitor_id
         inst.sign(priv_key)
         return inst
 

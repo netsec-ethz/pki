@@ -147,7 +147,7 @@ class MsgFields(object):
     TIMESTAMP = "timestamp"
     HASH = "hash"
     ENTRY_FROM = "entry_from"
-    ENTRY_TO = "entry_from"
+    ENTRY_TO = "entry_to"
     ENTRIES = "entries"
     ENTRIES_NO = "entries_no"
     MSC_LABEL = "msc_label"
