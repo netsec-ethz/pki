@@ -343,6 +343,37 @@ class RootConfirm(SignedMessage):
         return inst
 
 
+class RootConfirmReq(Message):
+    TYPE = MF.ROOT_CONFIRM_REQ
+    LOG_ID = "log_id"
+    ROOT_IDX = "root_idx"
+    def __init__(self, raw=None):
+        self.log_id = None
+        self.root_idx = None
+        super().__init__(raw)
+
+    def parse(self, raw):
+        dict_ = super().parse(raw)
+        if self.LOG_ID not in dict_ or self.ROOT_IDX not in dict_:
+            raise EEPKIParseError("Incomplete message")
+        self.log_id = dict_[self.LOG_ID]
+        self.root_idx = dict_[self.ROOT_IDX]
+
+    def pack(self):
+        dict_ = super().pack()
+        dict_[self.LOG_ID] = self.log_id
+        dict_[self.ROOT_IDX] = self.root_idx
+        return obj_to_bin(dict_)
+
+    @classmethod
+    def from_values(cls, log_id, root_idx):
+        inst = cls()
+        inst.log_id = log_id
+        inst.root_idx = root_idx
+        return inst
+
+
 def build_msg(raw):
-    classes = [ErrorMsg, AddMsg, AcceptMsg, UpdateMsg, ProofMsg, SignedRoot, RootConfirm]
+    classes = [ErrorMsg, AddMsg, AcceptMsg, UpdateMsg, ProofMsg,
+               SignedRoot, RootConfirm, RootConfirmReq]
     return build_obj(raw, classes)

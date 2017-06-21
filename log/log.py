@@ -38,18 +38,6 @@ class Log(object):
             self.add(entry)
         self.build(add_re=False)  # Don't add RootsEntry when pre-loaded
 
-    def add(self, entry):
-        if isinstance(entry, MSC):
-            self.add_msc(entry)
-        elif isinstance(entry, SCP):
-            self.add_scp(entry)
-        elif isinstance(entry, Revocation):
-            self.add_rev(entry)
-        elif isinstance(entry, RootsEntry):
-            self.cons_tree.add(entry)
-        else:
-            raise EEPKIError("Cannot add %s" % entry)
-
     def build(self, add_re=True):
         self.policy_tree.build()
         self.cert_tree.build()
@@ -57,6 +45,32 @@ class Log(object):
             re = RootsEntry.from_values(self.policy_tree.get_root(), self.cert_tree.get_root())
             self.cons_tree.add(re)
         self.cons_tree.build()
+
+    def add_entry(self, entry):
+        obj = None
+        if isinstance(entry, MSCEntry):
+            obj = entry.msc
+        elif isinstance(entry, SCPEntry):
+            obj = entry.scp
+        elif isinstance(entry, RevocationEntry):
+            obj = entry.rev
+        elif isinstance(entry, RootsEntry):
+            obj = entry
+        else:
+            raise EEPKIError("Invalid entry to add: %s" % entry)
+        self.add(obj)
+
+    def add(self, obj):
+        if isinstance(obj, MSC):
+            self.add_msc(obj)
+        elif isinstance(obj, SCP):
+            self.add_scp(obj)
+        elif isinstance(obj, Revocation):
+            self.add_rev(obj)
+        elif isinstance(obj, RootsEntry):
+            self.cons_tree.add(obj)
+        else:
+            raise EEPKIError("Cannot add %s" % obj)
 
     def add_scp(self, scp):
         se = SCPEntry.from_values(scp)

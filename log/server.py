@@ -136,7 +136,6 @@ class LogServer(EEPKIElement):
     def handle_update_request(self, msg, meta):
         msg.entries = self.log.cons_tree.entries[msg.entry_from:msg.entry_to]
         msg.log_id = self.log_id
-        logging.debug("Sending: %s" % msg)
         self.send_meta(msg, meta)
 
     @try_lock
