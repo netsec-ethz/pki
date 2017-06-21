@@ -47,13 +47,17 @@ class LogMonitor(EEPKIElement):
         self.my_id = "monitor1"
         self.pub_key = b'5w\x9c\xb6\xa1\xef\x8a\x95\xfd\x8d\xd6\x9bd\xbd\x1a\x9aN\r\xcaj6i=\xe2\xb1\xbe\xad\xe9\xad\x94\xc1\x00'
         self.priv_key = b"H\x05\xa7\x1b\xe7t\xdfF\xd4\xe6\xb67\x8a'#\x13\x1cc\xa2\xf4\xccI\xffU\xe1-W\xc8>.\x08\x94"
-        # Init logs
+        # Init log data structures
         self.log2addr = {}
         self.logs = {}
         self.log2lock = {}
         self.log2key = {}
         self.signed_roots = {}
         self.confirmed_roots = {}
+        # These are for communication only. Should be expiring.
+        self.asked_roots = {}
+        self.asked_updates = {}
+        # Init logs
         self.init_logs()
         # Init network
         super().__init__(addr)
@@ -68,6 +72,8 @@ class LogMonitor(EEPKIElement):
             self.log2key[log_id] = b'\xfd\xd99\xb3\x9e-\xa4%1\x80H\x9c\xd72?\xb1tCW;\xa1\x1b_o\xf8\xe8\xcf\xca\xdb\x0b>\x12'
             self.signed_roots[log_id] = {}
             self.confirmed_roots[log_id] = {}
+            self.asked_roots[log_id] = []
+            self.asked_updates[log_id] = []
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -106,11 +112,13 @@ class LogMonitor(EEPKIElement):
 
     def sync_log(self, log_id, meta):
         # First collect intermediate roots (if any is missing)
-        min_ = min(self.signed_roots[log_id].keys())
-        max_ = min(self.signed_roots[log_id].keys())
-        missing = range(min_, max_ + 1) - self.signed_roots[log_id].keys()
+        max_ = max(self.signed_roots[log_id].keys())
+        missing = range(0, max_ + 1) - self.signed_roots[log_id].keys()
+        logging.debug("Missing: %s, max %s" % (missing, max_))
         for idx in missing:
-            self.ask_root(meta, idx)
+            if idx not in self.asked_roots[log_id]:
+                self.ask_root(meta, idx)
+                self.asked_roots[log_id].append(idx)
         if missing: # Wait for roots before syncing content
             return
         # Ask for update of the first nonsynced root
@@ -118,12 +126,15 @@ class LogMonitor(EEPKIElement):
         if not root:
             logging.debug("Log: %s is up to date" % log_id)
             return
-        self.ask_update(meta, root)
+        if root.root_idx not in self.asked_updates[log_id]:
+            self.ask_update(meta, root)
+            self.asked_updates[log_id].append(root.root_idx)
 
     def ask_root(self, meta, idx=None):
         req = SignedRoot()
         if idx is not None:
             req.root_idx = idx
+        logging.debug("Asking for root: %s" % req)
         self.send_meta(req, meta)
 
     def first_nonsync_root(self, log_id):
@@ -153,34 +164,26 @@ class LogMonitor(EEPKIElement):
             return  # TODO(PSz): what to do here?
         root = self.first_nonsync_root(log_id)
         if not root:
-            logging.error("Updated for synchronized log")
+            logging.error("Update for synchronized log")
             return
         if root.entries_no != msg.entry_to:
             logging.error("Invalid entry_to in update: %d!=%d" % (root.entries_no, msg.entry_to))
             return  # TODO(PSz): what to do here?
-        # Check received entries
-        if not msg.entries:
-            logging.error("Empty update")
+        if len(msg.entries) != msg.entry_to - msg.entry_from:
+            logging.error("Number of entries incorrect")
             return
-        if not isinstance(msg.entries[-1], RootsEntry):
+        # Check received entries
+        if msg.entries and not isinstance(msg.entries[-1], RootsEntry):
             logging.error("The last entry is not RootsEntry")
             return
         # Can add entries now
         for entry in msg.entries:
-            obj = None
-            if isinstance(entry, MSCEntry):
-                obj = entry.msc
-            elif isinstance(entry, SCPEntry):
-                obj = entry.scp
-            elif isinstance(entry, RevocationEntry):
-                obj = entry.rev
-            elif isinstance(entry, RootsEntry):
-                obj = entry
-            else:
-                logging.error("Invalid entry to add: %s" % entry)
+            try:
+                # TODO(PSz): pre-validate entries here, similar as log servers do
+                log.add_entry(entry)
+            except EEPKIError as e:
+                logging.error(e)
                 return
-            # TODO(PSz): pre-validate entries here, similar as log servers do
-            log.add(obj)
         # Build log
         log.build(add_re=False)
         log.get_root_entries()
@@ -192,7 +195,6 @@ class LogMonitor(EEPKIElement):
         rc = RootConfirm.from_values(root, self.my_id, self.priv_key)
         self.confirmed_roots[log_id][root.root_idx] = rc
         logging.debug("log: %s updated" % log_id)
-
 
     def handle_confirm_request(self, msg, meta):
         pass
