@@ -22,6 +22,7 @@ from pki.log.log import Log
 from pki.log.msg import (
     ErrorMsg,
     RootConfirm,
+    RootConfirmReq,
     SignedRoot,
     UpdateMsg,
 )
@@ -57,6 +58,8 @@ class LogMonitor(EEPKIElement):
         # These are for communication only. Should be expiring.
         self.asked_roots = {}
         self.asked_updates = {}
+        # Request for non-synchronized roots. TODO(PSz): should be expiring
+        self.waiting = []
         # Init logs
         self.init_logs()
         # Init network
@@ -83,7 +86,7 @@ class LogMonitor(EEPKIElement):
             self.handle_root(msg, meta)
         elif isinstance(msg, UpdateMsg):
             self.handle_update(msg, meta)
-        elif isinstance(msg, RootConfirm):
+        elif isinstance(msg, RootConfirmReq):
             self.handle_confirm_request(msg, meta)
         elif isinstance(msg, ErrorMsg):
             self.handle_error(msg, meta)
@@ -185,19 +188,34 @@ class LogMonitor(EEPKIElement):
                 logging.error(e)
                 return
         # Build log
-        log.build(add_re=False)
-        log.get_root_entries()
-        new_root, new_entries = log.get_root_entries()
-        if new_root != root.root:
-            logging.error("Inconsistent roots after log update: %s!=%s" % (new_root, msg.root))
-            return  # TODO(PSz): what to do here? Undo changes and try again?
-        # The log is updated
-        rc = RootConfirm.from_values(root, self.my_id, self.priv_key)
-        self.confirmed_roots[log_id][root.root_idx] = rc
+        with self.log2lock[log_id]:
+            log.build(add_re=False)
+            new_root, new_entries = log.get_root_entries()
+            if new_root != root.root:
+                logging.error("Inconsistent roots after log update: %s!=%s" % (new_root, msg.root))
+                return  # TODO(PSz): what to do here? Undo changes and try again?
+            # The log is updated
+            rc = RootConfirm.from_values(root, self.my_id, self.priv_key)
+            self.confirmed_roots[log_id][root.root_idx] = rc
         logging.debug("log: %s updated" % log_id)
+        self.handle_waiting()
 
-    def handle_confirm_request(self, msg, meta):
-        pass
+    def handle_waiting(self):
+        for (req, meta) in self.waiting[:]:
+            if req.root_idx in self.confirmed_roots[req.log_id]:
+                rc = self.confirmed_roots[req.log_id][req.root_idx]
+                self.send_meta(rc, meta)
+                self.waiting.remove((req, meta))
+
+    def handle_confirm_request(self, req, meta):
+        if req.log_id not in self.confirmed_roots[req.log_id]:
+            self.send_error(meta, "Log %s unknown" % req.log_id)
+            return
+        if req.root_idx not in self.confirmed_roots[req.log_id]:
+            self.waiting.append((req, meta))
+            return
+        rc = self.confirmed_roots[req.log_id][req.root_idx]
+        self.send_meta(rc, meta)
 
     def worker(self):
         start = time.time()
