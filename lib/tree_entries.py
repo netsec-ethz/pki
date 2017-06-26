@@ -21,7 +21,6 @@ from .utils import bin_to_obj, build_obj, obj_to_bin
 
 @total_ordering
 class TreeEntry(object):
-    TYPE = "SHOULDN'T SEE THAT!!!"
     def __init__(self, raw):
         if raw:
             self.parse(raw)
@@ -56,19 +55,20 @@ class TreeEntry(object):
 
 class RevocationEntry(TreeEntry):
     TYPE = MF.REV_ENTRY
+    REV = "rev"
     def __init__(self, raw=None):
         self.rev = None
         super().__init__(raw)
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if not MF.REV in dict_:
+        if not self.REV in dict_:
             raise EEPKIParseError("No REV entry")
-        self.rev = Revocation(dict_[MF.REV])
+        self.rev = Revocation(dict_[self.REV])
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.REV] = self.rev.pack()
+        dict_[self.REV] = self.rev.pack()
         return obj_to_bin(dict_)
 
     @classmethod
@@ -80,19 +80,20 @@ class RevocationEntry(TreeEntry):
 
 class MSCEntry(TreeEntry):
     TYPE = MF.MSC_ENTRY
+    MSC = "msc"
     def __init__(self, raw=None):
         self.msc = None
         super().__init__(raw)
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if not MF.MSC in dict_:
+        if not self.MSC in dict_:
             raise EEPKIParseError("No MSC entry")
-        self.msc = MSC(dict_[MF.MSC])
+        self.msc = MSC(dict_[self.MSC])
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.MSC] = self.msc.pack()
+        dict_[self.MSC] = self.msc.pack()
         return obj_to_bin(dict_)
 
     @classmethod
@@ -108,6 +109,8 @@ class CertificateEntry(TreeEntry):
     the CertificateTree.
     """
     TYPE = MF.CERT_ENTRY
+    MSC = "msc"
+    REV = "rev"
     def __init__(self, raw=None):
         self.msc = None
         self.rev = None
@@ -115,21 +118,21 @@ class CertificateEntry(TreeEntry):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if not MF.MSC in dict_:
+        if not self.MSC in dict_:
             raise EEPKIParseError("No MSC entry")
-        self.msc = MSC(dict_[MF.MSC])
-        if not MF.REV in dict_:
+        self.msc = MSC(dict_[self.MSC])
+        if not self.REV in dict_:
             raise EEPKIParseError("No REV entry")
-        if dict_[MF.REV]:
-            self.rev = Revocation(dict_[MF.REV])
+        if dict_[self.REV]:
+            self.rev = Revocation(dict_[self.REV])
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.MSC] = self.msc.pack()
+        dict_[self.MSC] = self.msc.pack()
         if self.rev:
-            dict_[MF.REV] = self.rev.pack()
+            dict_[self.REV] = self.rev.pack()
         else:
-            dict_[MF.REV] = None
+            dict_[self.REV] = None
         return obj_to_bin(dict_)
 
     def get_label(self):
@@ -145,19 +148,20 @@ class CertificateEntry(TreeEntry):
 
 class SCPEntry(TreeEntry):
     TYPE = MF.SCP_ENTRY
+    SCP = "scp"
     def __init__(self, raw=None):
         self.scp = None
         super().__init__(raw)
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if not MF.SCP in dict_:
+        if not self.SCP in dict_:
             raise EEPKIParseError("No SCP entry")
-        self.scp = SCP(dict_[MF.SCP])
+        self.scp = SCP(dict_[self.SCP])
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.SCP] = self.scp.pack()
+        dict_[self.SCP] = self.scp.pack()
         return obj_to_bin(dict_)
 
     @classmethod
@@ -208,6 +212,8 @@ class PolicyEntry(TreeEntry):
     Representation of an SCP and its subtree. These entries build the PolicyTree.
     """
     TYPE = MF.POLICY_ENTRY
+    DNAME = "dname"
+    SCP = "scp"
     def __init__(self, raw=None):
         self.domain_name = None
         self.scp = None
@@ -217,24 +223,24 @@ class PolicyEntry(TreeEntry):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if not MF.DNAME in dict_:
+        if not self.DNAME in dict_:
             raise EEPKIParseError("No DNAME entry")
-        self.domain_name = dict_[MF.DNAME]
-        if not MF.SCP in dict_:
+        self.domain_name = dict_[self.DNAME]
+        if not self.SCP in dict_:
             raise EEPKIParseError("No SCP entry")
-        if dict_[MF.SCP]:
-            self.scp = SCP(dict_[MF.SCP])
+        if dict_[self.SCP]:
+            self.scp = SCP(dict_[self.SCP])
         if not MF.SUBROOT in dict_:
             raise EEPKIParseError("No SUBROOT entry")
         self.subroot = dict_[MF.SUBROOT]
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.DNAME] = self.domain_name
+        dict_[self.DNAME] = self.domain_name
         if self.scp:
-            dict_[MF.SCP] = self.scp.pack()
+            dict_[self.SCP] = self.scp.pack()
         else:
-            dict_[MF.SCP] = None
+            dict_[self.SCP] = None
         if self.subtree:
             dict_[MF.SUBROOT] = self.subtree.get_root()
         elif self.subroot:

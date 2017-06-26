@@ -21,7 +21,6 @@ from .utils import bin_to_obj, obj_to_bin, get_domains
 
 
 class BaseProof(object):
-    TYPE = "SHOULDN'T SEE THAT!!!"
     def __init__(self, raw=None):
         self.raw = raw
         if raw is not None:
@@ -50,6 +49,7 @@ class BaseProof(object):
 
 class PresenceProof(BaseProof):
     TYPE = MF.PRESENCE_PROOF
+    CHAIN = "chain"
     def __init__(self, raw=None):
         self.entry = None
         self.chain = None
@@ -59,9 +59,9 @@ class PresenceProof(BaseProof):
         dict_ = super().parse(raw)
         if len(dict_) != 3:  # FIXME(PSz): other parse()s need that as well.
             raise EEPKIParseError("#keys != 3")
-        if MF.CHAIN not in dict_:
+        if self.CHAIN not in dict_:
             raise EEPKIParseError("CHAIN not provided")
-        self.chain = dict_[MF.CHAIN]
+        self.chain = dict_[self.CHAIN]
         if MF.ENTRY not in dict_ or not dict_[MF.ENTRY]:
             raise EEPKIParseError("ENTRY not provided")
         self.entry = build_entry(dict_[MF.ENTRY])
@@ -69,7 +69,7 @@ class PresenceProof(BaseProof):
     def pack(self):
         dict_ = super().pack()
         dict_[MF.ENTRY] = self.entry.pack()
-        dict_[MF.CHAIN] = self.chain
+        dict_[self.CHAIN] = self.chain
         return obj_to_bin(dict_)
 
     @classmethod
@@ -110,6 +110,8 @@ class AbsenceProof(BaseProof):
     """
     """
     TYPE = MF.ABSENCE_PROOF
+    PROOF1 = "proof1"
+    PROOF2 = "proof2"
     def __init__(self, raw=None):
         """
         Absence proof consists of two presence proofs.
@@ -122,26 +124,26 @@ class AbsenceProof(BaseProof):
         dict_ = super().parse(raw)
         if len(dict_) != 3:
             raise EEPKIParseError("#keys != 2")
-        if MF.PROOF1 not in dict_:
+        if self.PROOF1 not in dict_:
             raise EEPKIParseError("PROOF1 not provided")
-        if dict_[MF.PROOF1]:
-            self.proof1 = PresenceProof(dict_[MF.PROOF1])
-        if MF.PROOF2 not in dict_:
+        if dict_[self.PROOF1]:
+            self.proof1 = PresenceProof(dict_[self.PROOF1])
+        if self.PROOF2 not in dict_:
             raise EEPKIParseError("PROOF2 not provided")
-        if dict_[MF.PROOF2]:
-            self.proof2 = PresenceProof(dict_[MF.PROOF2])
+        if dict_[self.PROOF2]:
+            self.proof2 = PresenceProof(dict_[self.PROOF2])
 
     def pack(self):
         # TODO(PSz): can be optimized as proof1 and proof2 have many nodes in common.
         dict_ = super().pack()
         if self.proof1:
-            dict_[MF.PROOF1] = self.proof1.pack()
+            dict_[self.PROOF1] = self.proof1.pack()
         else:
-            dict_[MF.PROOF1] = None
+            dict_[self.PROOF1] = None
         if self.proof2:
-            dict_[MF.PROOF2] = self.proof2.pack()
+            dict_[self.PROOF2] = self.proof2.pack()
         else:
-            dict_[MF.PROOF2] = None
+            dict_[self.PROOF2] = None
         return obj_to_bin(dict_)
 
     @classmethod
@@ -329,7 +331,7 @@ class EEPKIProof(BaseProof):
         if list_[1]:
             self.policy_proof = PolicyProof(list_[1])
         tmp = list_[2]
-        if tmp:
+        if tmp: # build_proof() and drop MF.ENTRY
             if MF.ENTRY in bin_to_obj(tmp):
                 self.cert_proof = PresenceProof(tmp)
             else:

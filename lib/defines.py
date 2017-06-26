@@ -109,11 +109,6 @@ class MsgFields(object):
     # Generic
     TYPE = "type"
     ENTRY = "entry"
-    REV = "rev"
-    MSC = "msc"
-    SCP = "scp"
-    CERT = "cert"
-    DNAME = "dname"
     # lib/tree_entries.py
     REV_ENTRY = "rev_entry"
     MSC_ENTRY = "msc_entry"
@@ -125,14 +120,11 @@ class MsgFields(object):
     CERT_ROOT = "cert_root"
     SUBROOT = "subroot"
     # lib/tree_proofs.py
-    CHAIN = "chain"
     ABSENCE_PROOF = "absence_proof"
-    PROOF1 = "proof1"
-    PROOF2 = "proof2"
     PRESENCE_PROOF = "presence_proof"
     POLICY_PROOF = "policy_proof"
     EEPKI_PROOF = "eepki_proof"
-    # Requests/Responses
+    # log/msg.py
     SIGNED_ROOT = "signed_root"
     ERROR_MSG = "error_msg"
     ADD_MSG = "add_msg"
@@ -142,15 +134,3 @@ class MsgFields(object):
     PROOF_MSG = "proof_msg"
     ROOT_CONFIRM = "root_confirm"
     ROOT_CONFIRM_REQ = "root_confirm_req"
-    # Message fields
-    SIGNATURE = "signature"
-    DESCRIPTION = "description"
-    TIMESTAMP = "timestamp"
-    HASH = "hash"
-    ENTRY_FROM = "entry_from"
-    ENTRY_TO = "entry_to"
-    ENTRIES = "entries"
-    ENTRIES_NO = "entries_no"
-    MSC_LABEL = "msc_label"
-    ROOT = "root"  # merge with SUBROOT?
-    APPEND_ROOT = "append_root"
