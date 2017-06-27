@@ -12,14 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import cbor
+import ipaddress
 import os
 import random
 import string
+import sys
 from collections import defaultdict
 
 from pki.tools.create_keypair import gen_keypair
 from pki.tools.create_msc import gen_msc
 from pki.tools.create_scp import gen_scp
+
+from lib.crypto.asymcrypto import generate_sign_keypair
+
 
 OUTPUT_DIR = "tmp/"
 # All other paths are relative to OUTPUT_DIR
@@ -28,6 +34,8 @@ MSC_CAS = ["../ISD1/CA1-3.cert", "../ISD1/CA1-3.key",
 SCP_CAS = ["../ISD1/CA1-1.cert","../ISD1/CA1-1.key",
            "../ISD1/CA1-2.cert", "../ISD1/CA1-2.key"]
 POLICY_FILE = "../tools/policy.json"
+# ASes for config generation
+ASes = ["1-10", "1-17", "1-18"]
 
 def random_domain_names(level=3, per_level=2, length=2):
     def random_word(length):
@@ -46,7 +54,7 @@ def random_domain_names(level=3, per_level=2, length=2):
     random.shuffle(res)
     return res
 
-def gen_all(level=5):
+def gen_certs(level=5):
     os.chdir(OUTPUT_DIR)
     os.system("rm *.msc *.scp *.key *.pub")
     for domain_name in random_domain_names(level):
@@ -64,8 +72,43 @@ def gen_all(level=5):
         gen_scp(argv)
         print("Generated keys and certs for %s" % domain_name)
 
+def gen_config(N, log_no, monitor_no):
+    try:
+        os.mkdir('conf/')
+    except FileExistsError:
+        pass
+    os.system('rm -f conf/sample.conf conf/*.priv')
+    #
+    dict_ = {"N": N}
+    dict_["logs"] = {}
+    dict_["monitors"] = {}
+    # First logs
+    for i in range(1, log_no + 1):
+        log_id = "log%d" % i
+        isd_as = random.choice(ASes)
+        ip = str(ipaddress.ip_address("127.0.1.0") + i)
+        pub, priv = generate_sign_keypair()
+        dict_["logs"][log_id] = [isd_as, ip, pub]
+        with open("conf/%s.priv" % log_id, "wb") as f:
+            f.write(priv)
+    # Then monitors
+    for i in range(1, monitor_no + 1):
+        monitor_id = "monitor%d" % i
+        isd_as = random.choice(ASes)
+        ip = str(ipaddress.ip_address("127.0.1.0") + i)
+        pub, priv = generate_sign_keypair()
+        dict_["monitors"][monitor_id] = [isd_as, ip, pub]
+        with open("conf/%s.priv" % monitor_id, "wb") as f:
+            f.write(priv)
+    # Save on disc
+    blob = cbor.dumps(dict_)
+    with open("conf/sample.conf", "wb") as f:
+        f.write(blob)
+    print("config generated")
+
 # Generate scion config and create a symlink to CA store and TRC, e.g.,:
 # ln -s ~/path_to/scion/gen/CAS/ISD1/
 # ln -s ~/path_to/scion/gen/ISD1/AS11/bs1-11-1/certs/ISD1-V0.trc
 if __name__ == "__main__":
-    gen_all(5)
+    gen_certs(5)
+    gen_config(3, 3, 3)
