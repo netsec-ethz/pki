@@ -17,11 +17,10 @@ from merkle import check_chain, MerkleError
 
 from .defines import EEPKIError, EEPKIParseError, MsgFields as MF
 from .tree_entries import RootsEntry, build_entry
-from .utils import bin_to_obj, obj_to_bin, get_domains
+from .utils import bin_to_obj, build_obj, obj_to_bin, get_domains
 
 
 class BaseProof(object):
-    TYPE = "SHOULDN'T SEE THAT!!!"
     def __init__(self, raw=None):
         self.raw = raw
         if raw is not None:
@@ -50,6 +49,8 @@ class BaseProof(object):
 
 class PresenceProof(BaseProof):
     TYPE = MF.PRESENCE_PROOF
+    CHAIN = "chain"
+    ENTRY = "entry"
     def __init__(self, raw=None):
         self.entry = None
         self.chain = None
@@ -59,17 +60,17 @@ class PresenceProof(BaseProof):
         dict_ = super().parse(raw)
         if len(dict_) != 3:  # FIXME(PSz): other parse()s need that as well.
             raise EEPKIParseError("#keys != 3")
-        if MF.CHAIN not in dict_:
+        if self.CHAIN not in dict_:
             raise EEPKIParseError("CHAIN not provided")
-        self.chain = dict_[MF.CHAIN]
-        if MF.ENTRY not in dict_ or not dict_[MF.ENTRY]:
+        self.chain = dict_[self.CHAIN]
+        if self.ENTRY not in dict_ or not dict_[self.ENTRY]:
             raise EEPKIParseError("ENTRY not provided")
-        self.entry = build_entry(dict_[MF.ENTRY])
+        self.entry = build_entry(dict_[self.ENTRY])
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.ENTRY] = self.entry.pack()
-        dict_[MF.CHAIN] = self.chain
+        dict_[self.ENTRY] = self.entry.pack()
+        dict_[self.CHAIN] = self.chain
         return obj_to_bin(dict_)
 
     @classmethod
@@ -110,6 +111,8 @@ class AbsenceProof(BaseProof):
     """
     """
     TYPE = MF.ABSENCE_PROOF
+    PROOF1 = "proof1"
+    PROOF2 = "proof2"
     def __init__(self, raw=None):
         """
         Absence proof consists of two presence proofs.
@@ -122,26 +125,26 @@ class AbsenceProof(BaseProof):
         dict_ = super().parse(raw)
         if len(dict_) != 3:
             raise EEPKIParseError("#keys != 2")
-        if MF.PROOF1 not in dict_:
+        if self.PROOF1 not in dict_:
             raise EEPKIParseError("PROOF1 not provided")
-        if dict_[MF.PROOF1]:
-            self.proof1 = PresenceProof(dict_[MF.PROOF1])
-        if MF.PROOF2 not in dict_:
+        if dict_[self.PROOF1]:
+            self.proof1 = PresenceProof(dict_[self.PROOF1])
+        if self.PROOF2 not in dict_:
             raise EEPKIParseError("PROOF2 not provided")
-        if dict_[MF.PROOF2]:
-            self.proof2 = PresenceProof(dict_[MF.PROOF2])
+        if dict_[self.PROOF2]:
+            self.proof2 = PresenceProof(dict_[self.PROOF2])
 
     def pack(self):
         # TODO(PSz): can be optimized as proof1 and proof2 have many nodes in common.
         dict_ = super().pack()
         if self.proof1:
-            dict_[MF.PROOF1] = self.proof1.pack()
+            dict_[self.PROOF1] = self.proof1.pack()
         else:
-            dict_[MF.PROOF1] = None
+            dict_[self.PROOF1] = None
         if self.proof2:
-            dict_[MF.PROOF2] = self.proof2.pack()
+            dict_[self.PROOF2] = self.proof2.pack()
         else:
-            dict_[MF.PROOF2] = None
+            dict_[self.PROOF2] = None
         return obj_to_bin(dict_)
 
     @classmethod
@@ -330,10 +333,7 @@ class EEPKIProof(BaseProof):
             self.policy_proof = PolicyProof(list_[1])
         tmp = list_[2]
         if tmp:
-            if MF.ENTRY in bin_to_obj(tmp):
-                self.cert_proof = PresenceProof(tmp)
-            else:
-                self.cert_proof = AbsenceProof(tmp)
+            self.cert_proof = build_proof(tmp)
 
     def pack(self):
         list_ = []
@@ -406,14 +406,6 @@ class EEPKIProof(BaseProof):
         return "\n".join(res)
 
 
-
 def build_proof(raw):
     classes = [AbsenceProof, PresenceProof]
-    dict_ = bin_to_obj(raw)
-    if MF.TYPE not in dict_:
-        raise EEPKIParseError("Type not found")
-    type_ = dict_[MF.TYPE]
-    for cls in classes:
-        if cls.TYPE == type_:
-            return cls(raw)
-    raise EEPKIParseError("Class of type %s not found" % type_)
+    return build_obj(raw, classes)

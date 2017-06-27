@@ -23,7 +23,6 @@ from pki.lib.tree_proofs import EEPKIProof
 from lib.crypto.asymcrypto import sign, verify
 
 class Message(object):
-    TYPE = "SHOULDN'T SEE THAT!!!"
     def __init__(self, raw=None):
         if raw:
             self.parse(raw)
@@ -50,6 +49,7 @@ class Message(object):
 
 
 class SignedMessage(Message):
+    SIGNATURE = "sig"
     def __init__(self, raw=None):
         self.signature = None
         if raw:
@@ -57,8 +57,8 @@ class SignedMessage(Message):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if MF.SIGNATURE in dict_:
-            self.signature = dict_[MF.SIGNATURE]
+        if self.SIGNATURE in dict_:
+            self.signature = dict_[self.SIGNATURE]
         return dict_
 
     def validate(self, pub_key):
@@ -73,22 +73,27 @@ class SignedMessage(Message):
         inst.signature = b""
         self.signature = sign(inst.pack(), priv_key)
 
+    def pack(self):
+        dict_ = super().pack()
+        dict_[self.SIGNATURE] = self.signature
+        return dict_
 
 class ErrorMsg(Message):
     TYPE = MF.ERROR_MSG
+    DESCRIPTION = "desc"
     def __init__(self, raw=None):
         self.description = None
         super().__init__(raw)
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if MF.DESCRIPTION in dict_:
-            self.description = dict_[MF.DESCRIPTION]
+        if self.DESCRIPTION in dict_:
+            self.description = dict_[self.DESCRIPTION]
 
     def pack(self):
         dict_ = super().pack()
         if self.description:
-            dict_[MF.DESCRIPTION] = self.description
+            dict_[self.DESCRIPTION] = self.description
         return obj_to_bin(dict_)
 
     @classmethod
@@ -100,19 +105,20 @@ class ErrorMsg(Message):
 
 class AddMsg(Message):
     TYPE = MF.ADD_MSG
+    ENTRY = "entry"
     def __init__(self, raw=None):
         self.entry = None
         super().__init__(raw)
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if MF.ENTRY not in dict_ or not dict_[MF.ENTRY]:
+        if self.ENTRY not in dict_ or not dict_[self.ENTRY]:
             raise EEPKIParseError("Incomplete message")
-        self.entry = build_entry(dict_[MF.ENTRY])
+        self.entry = build_entry(dict_[self.ENTRY])
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.ENTRY] = self.entry.pack()
+        dict_[self.ENTRY] = self.entry.pack()
         return obj_to_bin(dict_)
 
     @classmethod
@@ -124,6 +130,8 @@ class AddMsg(Message):
 
 class AcceptMsg(SignedMessage):
     TYPE = MF.ACCEPT_MSG
+    HASH = "hash"
+    TIMESTAMP = "time"
     def __init__(self, raw=None):
         self.hash = None
         self.timestamp = None
@@ -131,18 +139,17 @@ class AcceptMsg(SignedMessage):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if MF.HASH not in dict_ or not dict_[MF.HASH]:
+        if self.HASH not in dict_ or not dict_[self.HASH]:
             raise EEPKIParseError("Incomplete message")
-        self.hash = dict_[MF.HASH]
-        if MF.TIMESTAMP not in dict_ or not dict_[MF.TIMESTAMP]:
+        self.hash = dict_[self.HASH]
+        if self.TIMESTAMP not in dict_ or not dict_[self.TIMESTAMP]:
             raise EEPKIParseError("Incomplete message")
-        self.timestamp = dict_[MF.TIMESTAMP]
+        self.timestamp = dict_[self.TIMESTAMP]
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.HASH] = self.hash
-        dict_[MF.TIMESTAMP] = self.timestamp
-        dict_[MF.SIGNATURE] = self.signature
+        dict_[self.HASH] = self.hash
+        dict_[self.TIMESTAMP] = self.timestamp
         return obj_to_bin(dict_)
 
     @classmethod
@@ -164,6 +171,9 @@ class UpdateMsg(Message):
     """
     TYPE = MF.UPDATE_MSG
     LOG_ID = "log_id"
+    ENTRY_FROM = "from"
+    ENTRY_TO = "to"
+    ENTRIES = "entries"
     def __init__(self, raw=None):
         self.entry_from = None
         self.entry_to = None
@@ -173,17 +183,17 @@ class UpdateMsg(Message):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if MF.ENTRY_FROM not in dict_ or MF.ENTRY_TO not in dict_:
+        if self.ENTRY_FROM not in dict_ or self.ENTRY_TO not in dict_:
             raise EEPKIParseError("Incomplete message")
         try:
-            self.entry_from = int(dict_[MF.ENTRY_FROM])
-            self.entry_to = int(dict_[MF.ENTRY_TO])
+            self.entry_from = int(dict_[self.ENTRY_FROM])
+            self.entry_to = int(dict_[self.ENTRY_TO])
         except TypeError:
             raise EEPKIParseError("Incorrect message")
         if self.LOG_ID in dict_:
             self.log_id = dict_[self.LOG_ID]
-        if MF.ENTRIES in dict_:
-            for raw_entry in dict_[MF.ENTRIES]:
+        if self.ENTRIES in dict_:
+            for raw_entry in dict_[self.ENTRIES]:
                 self.entries.append(build_entry(raw_entry))
 
     def pack(self):
@@ -191,10 +201,10 @@ class UpdateMsg(Message):
         dict_[self.LOG_ID] = self.log_id
         if self.entry_from is None or self.entry_to is None:
             raise EEPKIParseError("Cannot pack")
-        dict_[MF.ENTRY_FROM] = self.entry_from
-        dict_[MF.ENTRY_TO] = self.entry_to
+        dict_[self.ENTRY_FROM] = self.entry_from
+        dict_[self.ENTRY_TO] = self.entry_to
         if self.entries:
-            dict_[MF.ENTRIES] = [entry.pack() for entry in self.entries]
+            dict_[self.ENTRIES] = [entry.pack() for entry in self.entries]
         return obj_to_bin(dict_)
 
     @classmethod
@@ -211,6 +221,10 @@ class ProofMsg(Message):
     When queried self.proof is None.
     """
     TYPE = MF.PROOF_MSG
+    DNAME = "name"
+    MSC_LABEL = "msc"
+    EEPKI_PROOF = "proof"
+    APPEND_ROOT = "append_root"
     def __init__(self, raw=None):
         self.domain_name = None
         self.msc_label = None
@@ -220,30 +234,30 @@ class ProofMsg(Message):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if MF.DNAME not in dict_ or not dict_[MF.DNAME]:
+        if self.DNAME not in dict_ or not dict_[self.DNAME]:
             raise EEPKIParseError("Incomplete message")
-        self.domain_name = dict_[MF.DNAME]
-        if MF.MSC_LABEL not in dict_:
+        self.domain_name = dict_[self.DNAME]
+        if self.MSC_LABEL not in dict_:
             raise EEPKIParseError("Incomplete message")
-        self.msc_label = dict_[MF.MSC_LABEL]
-        if MF.EEPKI_PROOF not in dict_:
+        self.msc_label = dict_[self.MSC_LABEL]
+        if self.EEPKI_PROOF not in dict_:
             raise EEPKIParseError("Incomplete message")
-        if dict_[MF.EEPKI_PROOF]:
-            self.eepki_proof = EEPKIProof(dict_[MF.EEPKI_PROOF])
-        if MF.APPEND_ROOT not in dict_:
+        if dict_[self.EEPKI_PROOF]:
+            self.eepki_proof = EEPKIProof(dict_[self.EEPKI_PROOF])
+        if self.APPEND_ROOT not in dict_:
             raise EEPKIParseError("Incomplete message")
-        if MF.APPEND_ROOT in dict_:
-            self.append_root = dict_[MF.APPEND_ROOT]
+        if self.APPEND_ROOT in dict_:
+            self.append_root = dict_[self.APPEND_ROOT]
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.DNAME] = self.domain_name
-        dict_[MF.MSC_LABEL] = self.msc_label
-        dict_[MF.APPEND_ROOT] = self.append_root
+        dict_[self.DNAME] = self.domain_name
+        dict_[self.MSC_LABEL] = self.msc_label
+        dict_[self.APPEND_ROOT] = self.append_root
         if self.eeepki_proof:
-            dict_[MF.EEPKI_PROOF] = self.eepki_proof.pack()
+            dict_[self.EEPKI_PROOF] = self.eepki_proof.pack()
         else:
-            dict_[MF.EEPKI_PROOF] = None
+            dict_[self.EEPKI_PROOF] = None
         return obj_to_bin(dict_)
 
     @classmethod
@@ -261,6 +275,9 @@ class SignedRoot(SignedMessage):
     Used for querying and returning signed roots.
     """
     TYPE = MF.SIGNED_ROOT
+    ROOT = "root"
+    TIMESTAMP = "time"
+    ENTRIES_NO = "entries_no"
     ROOT_IDX = "root_idx"
     LOG_ID = "log_id"
     def __init__(self, raw=None):
@@ -273,12 +290,12 @@ class SignedRoot(SignedMessage):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if MF.ROOT in dict_:
-            self.root = dict_[MF.ROOT]
-        if MF.TIMESTAMP in dict_:
-            self.timestamp = dict_[MF.TIMESTAMP]
-        if MF.ENTRIES_NO in dict_:
-            self.entries_no = dict_[MF.ENTRIES_NO]
+        if self.ROOT in dict_:
+            self.root = dict_[self.ROOT]
+        if self.TIMESTAMP in dict_:
+            self.timestamp = dict_[self.TIMESTAMP]
+        if self.ENTRIES_NO in dict_:
+            self.entries_no = dict_[self.ENTRIES_NO]
         if self.ROOT_IDX in dict_:
             self.root_idx = dict_[self.ROOT_IDX]
         if self.LOG_ID in dict_:
@@ -286,11 +303,10 @@ class SignedRoot(SignedMessage):
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.ROOT] = self.root
-        dict_[MF.TIMESTAMP] = self.timestamp
-        dict_[MF.ENTRIES_NO] = self.entries_no
+        dict_[self.ROOT] = self.root
+        dict_[self.TIMESTAMP] = self.timestamp
+        dict_[self.ENTRIES_NO] = self.entries_no
         dict_[self.ROOT_IDX] = self.root_idx
-        dict_[MF.SIGNATURE] = self.signature
         dict_[self.LOG_ID] = self.log_id
         return obj_to_bin(dict_)
 
