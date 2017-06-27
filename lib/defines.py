@@ -105,10 +105,7 @@ DEFAULT_POLICY = {
 
 
 class MsgFields(object):
-    #FIXME(PSz): getting too big, move them to related classes.
-    # Generic
     TYPE = "type"
-    ENTRY = "entry"
     # lib/tree_entries.py
     REV_ENTRY = "rev_entry"
     MSC_ENTRY = "msc_entry"
@@ -116,15 +113,12 @@ class MsgFields(object):
     CERT_ENTRY = "cert_entry"
     POLICY_ENTRY = "policy_entry"
     ROOTS_ENTRY = "roots_entry"
-    POLICY_ROOT = "policy_root"
-    CERT_ROOT = "cert_root"
-    SUBROOT = "subroot"
     # lib/tree_proofs.py
     ABSENCE_PROOF = "absence_proof"
     PRESENCE_PROOF = "presence_proof"
     POLICY_PROOF = "policy_proof"
     EEPKI_PROOF = "eepki_proof"
-    # log/msg.py
+    # lib/msg.py
     SIGNED_ROOT = "signed_root"
     ERROR_MSG = "error_msg"
     ADD_MSG = "add_msg"

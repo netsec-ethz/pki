@@ -17,7 +17,7 @@ from merkle import check_chain, MerkleError
 
 from .defines import EEPKIError, EEPKIParseError, MsgFields as MF
 from .tree_entries import RootsEntry, build_entry
-from .utils import bin_to_obj, obj_to_bin, get_domains
+from .utils import bin_to_obj, build_obj, obj_to_bin, get_domains
 
 
 class BaseProof(object):
@@ -50,6 +50,7 @@ class BaseProof(object):
 class PresenceProof(BaseProof):
     TYPE = MF.PRESENCE_PROOF
     CHAIN = "chain"
+    ENTRY = "entry"
     def __init__(self, raw=None):
         self.entry = None
         self.chain = None
@@ -62,13 +63,13 @@ class PresenceProof(BaseProof):
         if self.CHAIN not in dict_:
             raise EEPKIParseError("CHAIN not provided")
         self.chain = dict_[self.CHAIN]
-        if MF.ENTRY not in dict_ or not dict_[MF.ENTRY]:
+        if self.ENTRY not in dict_ or not dict_[self.ENTRY]:
             raise EEPKIParseError("ENTRY not provided")
-        self.entry = build_entry(dict_[MF.ENTRY])
+        self.entry = build_entry(dict_[self.ENTRY])
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.ENTRY] = self.entry.pack()
+        dict_[self.ENTRY] = self.entry.pack()
         dict_[self.CHAIN] = self.chain
         return obj_to_bin(dict_)
 
@@ -331,11 +332,8 @@ class EEPKIProof(BaseProof):
         if list_[1]:
             self.policy_proof = PolicyProof(list_[1])
         tmp = list_[2]
-        if tmp: # build_proof() and drop MF.ENTRY
-            if MF.ENTRY in bin_to_obj(tmp):
-                self.cert_proof = PresenceProof(tmp)
-            else:
-                self.cert_proof = AbsenceProof(tmp)
+        if tmp:
+            self.cert_proof = build_proof(tmp)
 
     def pack(self):
         list_ = []
@@ -408,14 +406,6 @@ class EEPKIProof(BaseProof):
         return "\n".join(res)
 
 
-
 def build_proof(raw):
     classes = [AbsenceProof, PresenceProof]
-    dict_ = bin_to_obj(raw)
-    if MF.TYPE not in dict_:
-        raise EEPKIParseError("Type not found")
-    type_ = dict_[MF.TYPE]
-    for cls in classes:
-        if cls.TYPE == type_:
-            return cls(raw)
-    raise EEPKIParseError("Class of type %s not found" % type_)
+    return build_obj(raw, classes)

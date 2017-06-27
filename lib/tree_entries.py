@@ -176,6 +176,8 @@ class SCPEntry(TreeEntry):
 
 class RootsEntry(TreeEntry):
     TYPE = MF.ROOTS_ENTRY
+    CT_ROOT = "ct_root"
+    PT_ROOT = "pt_root"
     def __init__(self, raw=None):
         self.policy_tree_root = None
         self.cert_tree_root = None
@@ -183,17 +185,17 @@ class RootsEntry(TreeEntry):
 
     def parse(self, raw):
         dict_ = super().parse(raw)
-        if not MF.POLICY_ROOT in dict_:
+        if not self.PT_ROOT in dict_:
             raise EEPKIParseError("No POLICY_ROOT entry")
-        self.policy_tree_root = dict_[MF.POLICY_ROOT]
-        if not MF.CERT_ROOT in dict_:
+        self.policy_tree_root = dict_[self.PT_ROOT]
+        if not self.CT_ROOT in dict_:
             raise EEPKIParseError("No CERT_ROOT entry")
-        self.cert_tree_root = dict_[MF.CERT_ROOT]
+        self.cert_tree_root = dict_[self.CT_ROOT]
 
     def pack(self):
         dict_ = super().pack()
-        dict_[MF.POLICY_ROOT] = self.policy_tree_root
-        dict_[MF.CERT_ROOT] = self.cert_tree_root
+        dict_[self.PT_ROOT] = self.policy_tree_root
+        dict_[self.CT_ROOT] = self.cert_tree_root
         return obj_to_bin(dict_)
 
     @classmethod
@@ -214,6 +216,7 @@ class PolicyEntry(TreeEntry):
     TYPE = MF.POLICY_ENTRY
     DNAME = "dname"
     SCP = "scp"
+    SUBROOT = "root"
     def __init__(self, raw=None):
         self.domain_name = None
         self.scp = None
@@ -230,9 +233,9 @@ class PolicyEntry(TreeEntry):
             raise EEPKIParseError("No SCP entry")
         if dict_[self.SCP]:
             self.scp = SCP(dict_[self.SCP])
-        if not MF.SUBROOT in dict_:
+        if not self.SUBROOT in dict_:
             raise EEPKIParseError("No SUBROOT entry")
-        self.subroot = dict_[MF.SUBROOT]
+        self.subroot = dict_[self.SUBROOT]
 
     def pack(self):
         dict_ = super().pack()
@@ -242,11 +245,11 @@ class PolicyEntry(TreeEntry):
         else:
             dict_[self.SCP] = None
         if self.subtree:
-            dict_[MF.SUBROOT] = self.subtree.get_root()
+            dict_[self.SUBROOT] = self.subtree.get_root()
         elif self.subroot:
-            dict_[MF.SUBROOT] = self.subroot
+            dict_[self.SUBROOT] = self.subroot
         else:
-            dict_[MF.SUBROOT] = None
+            dict_[self.SUBROOT] = None
         return obj_to_bin(dict_)
 
     @classmethod
