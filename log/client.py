@@ -18,13 +18,14 @@ import sys
 from merkle import hash_function
 
 from pki.lib.cert import MSC, SCP, Revocation
-from pki.lib.defines import EEPKI_PORT, EEPKIError
+from pki.lib.defines import EEPKI_PORT, EEPKIError, EEPKIValidationError
+from pki.lib.msg import *
 from pki.lib.tree_entries import (
     MSCEntry,
     RevocationEntry,
     SCPEntry,
     )
-from pki.log.msg import *
+from pki.log.monitor import LogMonitor
 from pki.log.server import PUB_KEY
 
 from lib.tcp.socket import SCIONTCPSocket
@@ -38,11 +39,12 @@ import lib.app.sciond as lib_sciond
 class LogClient(object):
     def __init__(self, addr):
         self.addr = addr
-        self.sock = SCIONTCPSocket()
+        self.sock = None
         self.pub_key = None  # Log's public key
 
     def connect(self, src_addr, pub_key):
         self.pub_key = pub_key
+        self.sock = SCIONTCPSocket()
         self.sock.bind((self.addr, 0))
         path_info = self.get_paths_info(src_addr.isd_as)
         if path_info:
@@ -66,6 +68,7 @@ class LogClient(object):
 
     def close(self):
         self.sock.close()
+        self.sock = None
 
     def get_proof_root(self, scp_label, msc_label=None, append_root=True):
         req = ProofMsg.from_values(scp_label, msc_label, append_root)
@@ -109,11 +112,10 @@ class LogClient(object):
         if isinstance(msg, SignedRoot):
             msg.validate(self.pub_key)
             # TODO(PSz): check freshness here?
+            return msg
         elif isinstance(msg, ErrorMsg):
             raise EEPKIError(msg.description)
-        else:
-            raise EEPKIError("Unsupported response")
-        return msg
+        raise EEPKIError("Unsupported response")
 
     def get_update(self, entry_from, entry_to):
         req = UpdateMsg.from_values(entry_from, entry_to)
@@ -125,11 +127,24 @@ class LogClient(object):
             raise EEPKIError(msg.description)
         raise EEPKIError("Unsupported response")
 
+    def confirm_root(self, root):
+        req = RootConfirmReq.from_values(root.log_id, root.root_idx)
+        self.send_msg(req)
+        msg = self.recv_msg()
+        if isinstance(msg, RootConfirm):
+            msg.validate(self.pub_key)
+            # TODO(PSz): check freshness here?
+            if root != msg.signed_root:
+                raise EEPKIValidationError("Roots mismatch: %s != %s" % (root, msg.root))
+            return msg
+        elif isinstance(msg, ErrorMsg):
+            raise EEPKIError(msg.description)
+        raise EEPKIError("Unsupported response")
 
 if __name__ == "__main__":
     if len(sys.argv) != 7:
         print("%s <srcISD-AS> <srcIP> <logISD-AS> <logIP> <monISD-AS> <monIP>" % sys.argv[0])
-        # PYTHONPATH=..:../scion python3 log/client.py 2-25 127.2.2.2 1-17 127.1.1.1
+        # PYTHONPATH=..:../scion python3 log/client.py 2-25 127.2.2.2 1-17 127.1.1.1 1-17 127.3.4.5
         sys.exit(-1)
     cli_addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
     # start client
@@ -140,5 +155,8 @@ if __name__ == "__main__":
     root = cli.get_root()
     cli.close()
     # connect to a monitor and confirm the root
-    log_addr = SCIONAddr.from_values(ISD_AS(sys.argv[5]), haddr_parse(1, sys.argv[6]))
-    cli.connect()
+    mon_addr = SCIONAddr.from_values(ISD_AS(sys.argv[5]), haddr_parse(1, sys.argv[6]))
+    monitor_pub_key = b'5w\x9c\xb6\xa1\xef\x8a\x95\xfd\x8d\xd6\x9bd\xbd\x1a\x9aN\r\xcaj6i=\xe2\xb1\xbe\xad\xe9\xad\x94\xc1\x00'
+    cli.connect(mon_addr, monitor_pub_key)
+    print(cli.confirm_root(root))
+    cli.close()

@@ -17,6 +17,14 @@ import time
 import threading
 from merkle import hash_function
 
+from pki.lib.msg import (
+    AcceptMsg,
+    AddMsg,
+    ErrorMsg,
+    ProofMsg,
+    SignedRoot,
+    UpdateMsg,
+)
 from pki.lib.tree_entries import (
     CertificateEntry,
     MSCEntry,
@@ -26,14 +34,6 @@ from pki.lib.tree_entries import (
 )
 from pki.log.elem import EEPKIElement
 from pki.log.log import Log
-from pki.log.msg import (
-    AcceptMsg,
-    AddMsg,
-    ErrorMsg,
-    ProofMsg,
-    SignedRoot,
-    UpdateMsg,
-)
 
 # SCION
 from lib.packet.host_addr import haddr_parse
@@ -106,9 +106,9 @@ class LogServer(EEPKIElement):
             elif isinstance(msg.entry, RevocationEntry):
                 self.handle_add_rev(msg.entry.rev, meta)
             else:
-                self.send_error(meta, "No handler for entry")
+                self.send_error("No handler for entry", meta)
         else:
-            self.send_error(meta, "No handler for request")
+            self.send_error("No handler for request", meta)
 
     def send_error(self, desc, meta):
         msg = ErrorMsg.from_values(desc)

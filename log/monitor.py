@@ -17,9 +17,7 @@ import threading
 import time
 
 from pki.lib.defines import EEPKI_PORT
-from pki.log.elem import EEPKIElement
-from pki.log.log import Log
-from pki.log.msg import (
+from pki.lib.msg import (
     ErrorMsg,
     RootConfirm,
     RootConfirmReq,
@@ -31,7 +29,9 @@ from pki.lib.tree_entries import (
     RevocationEntry,
     RootsEntry,
     SCPEntry,
-    )
+)
+from pki.log.elem import EEPKIElement
+from pki.log.log import Log
 
 # SCION
 from lib.crypto.trc import TRC
@@ -91,7 +91,7 @@ class LogMonitor(EEPKIElement):
         elif isinstance(msg, ErrorMsg):
             self.handle_error(msg, meta)
         else:
-            self.send_error(meta, "No handler for request: %s" % msg)
+            self.send_error("No handler for request: %s" % msg, meta)
 
     def handle_error(self, msg, meta):
         logging.error("Received: %s" % msg)
@@ -129,6 +129,7 @@ class LogMonitor(EEPKIElement):
         if not root:
             logging.debug("Log: %s is up to date" % log_id)
             return
+        logging.debug("asked_updates: %s" % self.asked_updates)
         if root.root_idx not in self.asked_updates[log_id]:
             self.ask_update(meta, root)
             self.asked_updates[log_id].append(root.root_idx)
@@ -197,8 +198,10 @@ class LogMonitor(EEPKIElement):
             # The log is updated
             rc = RootConfirm.from_values(root, self.my_id, self.priv_key)
             self.confirmed_roots[log_id][root.root_idx] = rc
-        logging.debug("log: %s updated" % log_id)
+        logging.debug("log: %s updated with root_idx=%d" % (log_id, root.root_idx))
         self.handle_waiting()
+        # Check for another update:
+        self.sync_log(log_id, meta)
 
     def handle_waiting(self):
         for (req, meta) in self.waiting[:]:
@@ -206,12 +209,15 @@ class LogMonitor(EEPKIElement):
                 rc = self.confirmed_roots[req.log_id][req.root_idx]
                 self.send_meta(rc, meta)
                 self.waiting.remove((req, meta))
+                logging.debug("handled waiting req")
 
     def handle_confirm_request(self, req, meta):
-        if req.log_id not in self.confirmed_roots[req.log_id]:
-            self.send_error(meta, "Log %s unknown" % req.log_id)
+        logging.debug("Asked to confirm: (%s,%d)" % (req.log_id, req.root_idx))
+        if req.log_id not in self.confirmed_roots:
+            self.send_error("Log %s unknown" % req.log_id, meta)
             return
         if req.root_idx not in self.confirmed_roots[req.log_id]:
+            logging.debug("Added to waiting %s" % req)
             self.waiting.append((req, meta))
             return
         rc = self.confirmed_roots[req.log_id][req.root_idx]

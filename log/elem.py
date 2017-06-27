@@ -17,8 +17,8 @@ import threading
 import time
 
 from pki.lib.defines import EEPKI_PORT
-from pki.log.msg import build_msg
-from infrastructure.scion_elem import SCIONElement, MAX_QUEUE
+from pki.lib.msg import build_msg
+from infrastructure.scion_elem import SCIONElement
 from lib.socket import SocketMgr
 from lib.msg_meta import TCPMetadata
 
@@ -36,7 +36,7 @@ class EEPKIElement(SCIONElement):
         self.run_flag.set()
         self.stopped_flag = threading.Event()
         self.stopped_flag.clear()
-        self._in_buf = queue.Queue(MAX_QUEUE)
+        self._in_buf = queue.Queue()
         self._socks = SocketMgr()
         self._setup_sockets(True)
         self._startup = time.time()

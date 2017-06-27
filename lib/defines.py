@@ -101,7 +101,7 @@ DEFAULT_POLICY = {
     PolicyFields.FAIL_POL_VER: ValidationResult.SOFTFAIL,
     PolicyFields.FAIL_LOG: ValidationResult.SOFTFAIL,
     PolicyFields.INHERITANCE: [],
-    }
+}
 
 
 class MsgFields(object):
