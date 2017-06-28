@@ -65,8 +65,8 @@ class LogServer(EEPKIElement):
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
         # Init log
         self.log_id = "log1"
-        self.priv_key = PRIV_KEY
-        self.pub_key = PUB_KEY
+        self.privkey = PRIV_KEY
+        self.pubkey = PUB_KEY
         entries = self.init_db()
         self.log = Log(entries)
         self.lock = threading.Lock()
@@ -85,7 +85,7 @@ class LogServer(EEPKIElement):
         root, entries_no = self.log.get_root_entries()
         root_idx = len(self.signed_roots)
         self.signed_roots.append(SignedRoot.from_values(root, root_idx, entries_no,
-                                                        self.log_id, self.priv_key))
+                                                        self.log_id, self.privkey))
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -218,7 +218,7 @@ class LogServer(EEPKIElement):
 
     def accept(self, obj, meta):
         hash_ = hash_function(obj.pack()).digest()
-        msg = AcceptMsg.from_values(hash_, self.priv_key)
+        msg = AcceptMsg.from_values(hash_, self.privkey)
         self.send_meta(msg, meta)
 
     def worker(self):

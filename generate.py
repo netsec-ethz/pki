@@ -79,7 +79,7 @@ def gen_config(N, log_no, monitor_no):
         pass
     os.system('rm -f conf/sample.conf conf/*.priv')
     #
-    dict_ = {"N": N}
+    dict_ = {"threshold": N}
     dict_["logs"] = {}
     dict_["monitors"] = {}
     # First logs

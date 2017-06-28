@@ -46,8 +46,8 @@ class LogMonitor(EEPKIElement):
     def __init__(self, addr):
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
         self.my_id = "monitor1"
-        self.pub_key = b'5w\x9c\xb6\xa1\xef\x8a\x95\xfd\x8d\xd6\x9bd\xbd\x1a\x9aN\r\xcaj6i=\xe2\xb1\xbe\xad\xe9\xad\x94\xc1\x00'
-        self.priv_key = b"H\x05\xa7\x1b\xe7t\xdfF\xd4\xe6\xb67\x8a'#\x13\x1cc\xa2\xf4\xccI\xffU\xe1-W\xc8>.\x08\x94"
+        self.pubkey = b'5w\x9c\xb6\xa1\xef\x8a\x95\xfd\x8d\xd6\x9bd\xbd\x1a\x9aN\r\xcaj6i=\xe2\xb1\xbe\xad\xe9\xad\x94\xc1\x00'
+        self.privkey = b"H\x05\xa7\x1b\xe7t\xdfF\xd4\xe6\xb67\x8a'#\x13\x1cc\xa2\xf4\xccI\xffU\xe1-W\xc8>.\x08\x94"
         # Init log data structures
         self.log2addr = {}
         self.logs = {}
@@ -196,7 +196,7 @@ class LogMonitor(EEPKIElement):
                 logging.error("Inconsistent roots after log update: %s!=%s" % (new_root, msg.root))
                 return  # TODO(PSz): what to do here? Undo changes and try again?
             # The log is updated
-            rc = RootConfirm.from_values(root, self.my_id, self.priv_key)
+            rc = RootConfirm.from_values(root, self.my_id, self.privkey)
             self.confirmed_roots[log_id][root.root_idx] = rc
         logging.debug("log: %s updated with root_idx=%d" % (log_id, root.root_idx))
         self.handle_waiting()
