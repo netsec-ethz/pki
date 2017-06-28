@@ -28,22 +28,22 @@ from pki.lib.tree_entries import (
 from pki.log.monitor import LogMonitor
 from pki.log.server import PUB_KEY
 
+import lib.app.sciond as lib_sciond
 from lib.tcp.socket import SCIONTCPSocket
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
 from lib.util import recv_all
 from test.integration.base_cli_srv import get_sciond_api_addr
-import lib.app.sciond as lib_sciond
 
 
 class LogClient(object):
     def __init__(self, addr):
         self.addr = addr
         self.sock = None
-        self.pub_key = None  # Log's public key
+        self.pubkey = None  # Log's public key
 
-    def connect(self, src_addr, pub_key):
-        self.pub_key = pub_key
+    def connect(self, src_addr, pubkey):
+        self.pubkey = pubkey
         self.sock = SCIONTCPSocket()
         self.sock.bind((self.addr, 0))
         path_info = self.get_paths_info(src_addr.isd_as)
@@ -94,7 +94,7 @@ class LogClient(object):
         self.send_msg(req)
         msg = self.recv_msg()
         if isinstance(msg, AcceptMsg):
-            msg.validate(self.pub_key)
+            msg.validate(self.pubkey)
             # TODO(PSz): check freshness here?
             hash_ = hash_function(obj.pack()).digest()
             if  hash_ != msg.hash:
@@ -110,7 +110,7 @@ class LogClient(object):
         self.send_msg(req)
         msg = self.recv_msg()
         if isinstance(msg, SignedRoot):
-            msg.validate(self.pub_key)
+            msg.validate(self.pubkey)
             # TODO(PSz): check freshness here?
             return msg
         elif isinstance(msg, ErrorMsg):
@@ -132,7 +132,7 @@ class LogClient(object):
         self.send_msg(req)
         msg = self.recv_msg()
         if isinstance(msg, RootConfirm):
-            msg.validate(self.pub_key)
+            msg.validate(self.pubkey)
             # TODO(PSz): check freshness here?
             if root != msg.signed_root:
                 raise EEPKIValidationError("Roots mismatch: %s != %s" % (root, msg.root))
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     cli.close()
     # connect to a monitor and confirm the root
     mon_addr = SCIONAddr.from_values(ISD_AS(sys.argv[5]), haddr_parse(1, sys.argv[6]))
-    monitor_pub_key = b'5w\x9c\xb6\xa1\xef\x8a\x95\xfd\x8d\xd6\x9bd\xbd\x1a\x9aN\r\xcaj6i=\xe2\xb1\xbe\xad\xe9\xad\x94\xc1\x00'
-    cli.connect(mon_addr, monitor_pub_key)
+    monitor_pubkey = b'5w\x9c\xb6\xa1\xef\x8a\x95\xfd\x8d\xd6\x9bd\xbd\x1a\x9aN\r\xcaj6i=\xe2\xb1\xbe\xad\xe9\xad\x94\xc1\x00'
+    cli.connect(mon_addr, monitor_pubkey)
     print(cli.confirm_root(root))
     cli.close()

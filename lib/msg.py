@@ -61,17 +61,17 @@ class SignedMessage(Message):
             self.signature = dict_[self.SIGNATURE]
         return dict_
 
-    def validate(self, pub_key):
+    def validate(self, pubkey):
         inst = copy.copy(self)
         inst.signature = b""
-        if not verify(inst.pack(), self.signature, pub_key):
+        if not verify(inst.pack(), self.signature, pubkey):
             raise EEPKIValidationError("Incorrect signature")
         return True
 
-    def sign(self, priv_key):
+    def sign(self, privkey):
         inst = copy.copy(self)
         inst.signature = b""
-        self.signature = sign(inst.pack(), priv_key)
+        self.signature = sign(inst.pack(), privkey)
 
     def pack(self):
         dict_ = super().pack()
@@ -153,11 +153,11 @@ class AcceptMsg(SignedMessage):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(cls, hash_, priv_key):
+    def from_values(cls, hash_, privkey):
         inst = cls()
         inst.hash = hash_
         inst.timestamp = int(time.time())
-        inst.sign(priv_key)
+        inst.sign(privkey)
         return inst
 
 
@@ -311,14 +311,14 @@ class SignedRoot(SignedMessage):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(cls, root, root_idx, entries_no, log_id, priv_key):
+    def from_values(cls, root, root_idx, entries_no, log_id, privkey):
         inst = cls()
         inst.root = root
         inst.root_idx = root_idx
         inst.entries_no = entries_no
         inst.log_id = log_id
         inst.timestamp = int(time.time())
-        inst.sign(priv_key)
+        inst.sign(privkey)
         return inst
 
 
@@ -351,11 +351,11 @@ class RootConfirm(SignedMessage):
         return obj_to_bin(dict_)
 
     @classmethod
-    def from_values(cls, signed_root, monitor_id, priv_key):
+    def from_values(cls, signed_root, monitor_id, privkey):
         inst = cls()
         inst.signed_root = signed_root
         inst.monitor_id = monitor_id
-        inst.sign(priv_key)
+        inst.sign(privkey)
         return inst
 
 

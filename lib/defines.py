@@ -19,6 +19,9 @@ POLICY_OID = "1.2.34.56.1"
 POLICY_BINDIND_OID = "1.2.34.56.2"
 CERT_SEP = b'-----BEGIN CERTIFICATE-----\n'
 DAY = 3600*24
+OUTPUT_DIR = "tmp/"  # Contains all generated certificates, configs, etc...
+CONF_DIR = "conf/"
+CONF_FILE = "sample.conf"
 
 
 # TODO(PSz): introduce more granular classes
