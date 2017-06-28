@@ -18,6 +18,8 @@ import time
 
 from pki.lib.defines import EEPKI_PORT
 from pki.lib.msg import build_msg
+from pki.log.conf import Conf
+
 from infrastructure.scion_elem import SCIONElement
 from lib.socket import SocketMgr
 from lib.msg_meta import TCPMetadata
@@ -28,9 +30,12 @@ class EEPKIElement(SCIONElement):
     Base class for EEPKI servers.
     """
     USE_TCP = True
-    def __init__(self, addr):
+    def __init__(self, conf_file, priv_key_file, my_id):
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
+        # First configuration
+        self.conf = Conf(conf_file, priv_key_file, my_id)
         # Only relevant stuff from SCIONElement
-        self.addr = addr
+        self.addr = self.conf.get_addr()
         self._port = EEPKI_PORT
         self.run_flag = threading.Event()
         self.run_flag.set()

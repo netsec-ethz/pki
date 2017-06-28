@@ -28,12 +28,12 @@ from pki.lib.tree_entries import (
 from pki.log.monitor import LogMonitor
 from pki.log.server import PUB_KEY
 
+import lib.app.sciond as lib_sciond
 from lib.tcp.socket import SCIONTCPSocket
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
 from lib.util import recv_all
 from test.integration.base_cli_srv import get_sciond_api_addr
-import lib.app.sciond as lib_sciond
 
 
 class LogClient(object):

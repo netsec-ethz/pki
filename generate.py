@@ -20,6 +20,7 @@ import string
 import sys
 from collections import defaultdict
 
+from pki.lib.defines import CONF_DIR, CONF_FILE, OUTPUT_DIR
 from pki.tools.create_keypair import gen_keypair
 from pki.tools.create_msc import gen_msc
 from pki.tools.create_scp import gen_scp
@@ -27,7 +28,6 @@ from pki.tools.create_scp import gen_scp
 from lib.crypto.asymcrypto import generate_sign_keypair
 
 
-OUTPUT_DIR = "tmp/"
 # All other paths are relative to OUTPUT_DIR
 MSC_CAS = ["../ISD1/CA1-3.cert", "../ISD1/CA1-3.key",
            "../ISD1/CA1-2.cert", "../ISD1/CA1-2.key"]
@@ -55,7 +55,6 @@ def random_domain_names(level=3, per_level=2, length=2):
     return res
 
 def gen_certs(level=5):
-    os.chdir(OUTPUT_DIR)
     os.system("rm *.msc *.scp *.key *.pub")
     for domain_name in random_domain_names(level):
         # Generate keypairs
@@ -72,14 +71,14 @@ def gen_certs(level=5):
         gen_scp(argv)
         print("Generated keys and certs for %s" % domain_name)
 
-def gen_config(N, log_no, monitor_no):
+def gen_config(threshold, log_no, monitor_no):
     try:
         os.mkdir('conf/')
     except FileExistsError:
         pass
-    os.system('rm -f conf/sample.conf conf/*.priv')
+    os.system("rm -f " + CONF_DIR + CONF_FILE + " %s*.priv" % CONF_DIR)
     #
-    dict_ = {"threshold": N}
+    dict_ = {"threshold": threshold}
     dict_["logs"] = {}
     dict_["monitors"] = {}
     # First logs
@@ -89,7 +88,7 @@ def gen_config(N, log_no, monitor_no):
         ip = str(ipaddress.ip_address("127.0.1.0") + i)
         pub, priv = generate_sign_keypair()
         dict_["logs"][log_id] = [isd_as, ip, pub]
-        with open("conf/%s.priv" % log_id, "wb") as f:
+        with open(CONF_DIR + "%s.priv" % log_id, "wb") as f:
             f.write(priv)
     # Then monitors
     for i in range(1, monitor_no + 1):
@@ -98,11 +97,11 @@ def gen_config(N, log_no, monitor_no):
         ip = str(ipaddress.ip_address("127.0.1.0") + i)
         pub, priv = generate_sign_keypair()
         dict_["monitors"][monitor_id] = [isd_as, ip, pub]
-        with open("conf/%s.priv" % monitor_id, "wb") as f:
+        with open(CONF_DIR + "%s.priv" % monitor_id, "wb") as f:
             f.write(priv)
     # Save on disc
     blob = cbor.dumps(dict_)
-    with open("conf/sample.conf", "wb") as f:
+    with open(CONF_DIR + CONF_FILE, "wb") as f:
         f.write(blob)
     print("config generated")
 
@@ -110,5 +109,6 @@ def gen_config(N, log_no, monitor_no):
 # ln -s ~/path_to/scion/gen/CAS/ISD1/
 # ln -s ~/path_to/scion/gen/ISD1/AS11/bs1-11-1/certs/ISD1-V0.trc
 if __name__ == "__main__":
+    os.chdir(OUTPUT_DIR)
     gen_certs(5)
     gen_config(3, 3, 3)

@@ -16,7 +16,7 @@ import sys
 import threading
 import time
 
-from pki.lib.defines import EEPKI_PORT
+from pki.lib.defines import CONF_DIR, CONF_FILE, EEPKI_PORT, OUTPUT_DIR
 from pki.lib.msg import (
     ErrorMsg,
     RootConfirm,
@@ -34,25 +34,22 @@ from pki.log.elem import EEPKIElement
 from pki.log.log import Log
 
 # SCION
-from lib.crypto.trc import TRC
+import lib.app.sciond as lib_sciond
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
 from lib.thread import thread_safety_net
 from lib.util import sleep_interval
+from test.integration.base_cli_srv import get_sciond_api_addr
 
 
 class LogMonitor(EEPKIElement):
     MONITOR_INTERVAL = 2
-    def __init__(self, addr):
-        logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
-        self.my_id = "monitor1"
-        self.pubkey = b'5w\x9c\xb6\xa1\xef\x8a\x95\xfd\x8d\xd6\x9bd\xbd\x1a\x9aN\r\xcaj6i=\xe2\xb1\xbe\xad\xe9\xad\x94\xc1\x00'
-        self.privkey = b"H\x05\xa7\x1b\xe7t\xdfF\xd4\xe6\xb67\x8a'#\x13\x1cc\xa2\xf4\xccI\xffU\xe1-W\xc8>.\x08\x94"
+    def __init__(self, conf_file, priv_key_file, my_id):
+        # Init configuration and network
+        super().__init__(conf_file, priv_key_file, my_id)
         # Init log data structures
-        self.log2addr = {}
         self.logs = {}
         self.log2lock = {}
-        self.log2key = {}
         self.signed_roots = {}
         self.confirmed_roots = {}
         # These are for communication only. Should be expiring.
@@ -62,17 +59,12 @@ class LogMonitor(EEPKIElement):
         self.waiting = []
         # Init logs
         self.init_logs()
-        # Init network
-        super().__init__(addr)
 
     def init_logs(self):
-        # TODO(PSz): read from TRC
-        addr = SCIONAddr.from_values(ISD_AS("1-17"), haddr_parse(1, "127.1.1.1"))
-        self.log2addr = {"log1": addr}
-        for log_id in self.log2addr:
+        for log_id in self.conf.logs:
+            log_id = "log1"
             self.logs[log_id] = Log()
             self.log2lock[log_id] = threading.Lock()
-            self.log2key[log_id] = b'\xfd\xd99\xb3\x9e-\xa4%1\x80H\x9c\xd72?\xb1tCW;\xa1\x1b_o\xf8\xe8\xcf\xca\xdb\x0b>\x12'
             self.signed_roots[log_id] = {}
             self.confirmed_roots[log_id] = {}
             self.asked_roots[log_id] = []
@@ -102,7 +94,7 @@ class LogMonitor(EEPKIElement):
 
     def handle_root(self, msg, meta):
         log_id = msg.log_id
-        if not msg.validate(self.log2key[log_id]):
+        if not msg.validate(self.conf.get_pubkey(log_id)):
             logging.error("Cannot validate: %s" % msg)
             return
         idx = msg.root_idx
@@ -196,7 +188,7 @@ class LogMonitor(EEPKIElement):
                 logging.error("Inconsistent roots after log update: %s!=%s" % (new_root, msg.root))
                 return  # TODO(PSz): what to do here? Undo changes and try again?
             # The log is updated
-            rc = RootConfirm.from_values(root, self.my_id, self.privkey)
+            rc = RootConfirm.from_values(root, self.conf.my_id, self.conf.privkey)
             self.confirmed_roots[log_id][root.root_idx] = rc
         logging.debug("log: %s updated with root_idx=%d" % (log_id, root.root_idx))
         self.handle_waiting()
@@ -232,9 +224,13 @@ class LogMonitor(EEPKIElement):
             self.ask_for_roots()
 
     def ask_for_roots(self):
-        for addr in self.log2addr.values():
+        for tmp in [self.conf.logs["log1"]]: #self.conf.logs.values():
             req = SignedRoot()
-            meta = self._build_meta(addr.isd_as, addr.host, port=EEPKI_PORT, reuse=True)
+            path = self.get_path(tmp.addr.isd_as)
+            if not path:
+                continue
+            meta = self._build_meta(tmp.addr.isd_as, tmp.addr.host, path=path,
+                                    port=EEPKI_PORT, reuse=True)
             self.send_meta(req, meta)
 
     def run(self):
@@ -243,12 +239,23 @@ class LogMonitor(EEPKIElement):
             name="LogMonitor.worker", daemon=True).start()
         super().run()
 
+    def get_path(self, dst_isd_as):
+        lib_sciond.init(get_sciond_api_addr(self.addr))
+        replies = lib_sciond.get_paths(dst_isd_as)
+        if not replies:
+            logging.warning("Cannot get a path to %s" % dst_isd_as)
+            return
+        return replies[0].path().fwd_path()
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("%s <ISD-AS> <IP>" % sys.argv[0])
+    if len(sys.argv) != 2:
+        print("%s monitor_id" % sys.argv[0])
         # PYTHONPATH=..:../scion python3 log/monitor.py 1-17 127.3.4.5
         sys.exit(-1)
-    addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
-    log_monitor = LogMonitor(addr)
+    id_ = sys.argv[1]
+    conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE
+    priv_key_file = OUTPUT_DIR + CONF_DIR + id_ + ".priv"
+    log_monitor = LogMonitor(conf_file, priv_key_file, id_)
     print("running monitor")
     log_monitor.run()

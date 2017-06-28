@@ -17,6 +17,7 @@ import time
 import threading
 from merkle import hash_function
 
+from pki.lib.defines import CONF_DIR, CONF_FILE, OUTPUT_DIR
 from pki.lib.msg import (
     AcceptMsg,
     AddMsg,
@@ -41,9 +42,6 @@ from lib.packet.scion_addr import ISD_AS, SCIONAddr
 from lib.thread import thread_safety_net
 from lib.util import sleep_interval
 
-PRIV_KEY = b']\xc1\xdc\x07o\x0c\xa2(\x95JA\xdc\xcd\x9ez\xc2!\xd2\x82\xe0cK?\xf2X\xb1H\xe7\xcf\xf7\xad\xf4'
-PUB_KEY = b'\xfd\xd99\xb3\x9e-\xa4%1\x80H\x9c\xd72?\xb1tCW;\xa1\x1b_o\xf8\xe8\xcf\xca\xdb\x0b>\x12'
-
 
 def try_lock(handler):
     def wrapper(inst, obj, meta):
@@ -61,12 +59,10 @@ def try_lock(handler):
 
 class LogServer(EEPKIElement):
     UPDATE_INTERVAL = 10  # FIXME(PSz): so low for testing
-    def __init__(self, addr):
-        logging.basicConfig(level=logging.DEBUG, format="%(asctime)-15s %(message)s")
+    def __init__(self, conf_file, priv_key_file, my_id):
+        # Init configuration and network
+        super().__init__(conf_file, priv_key_file, my_id)
         # Init log
-        self.log_id = "log1"
-        self.privkey = PRIV_KEY
-        self.pubkey = PUB_KEY
         entries = self.init_db()
         self.log = Log(entries)
         self.lock = threading.Lock()
@@ -75,8 +71,6 @@ class LogServer(EEPKIElement):
         self.revs_to_add = []
         self.signed_roots = []
         self.update_root()
-        # Init network
-        super().__init__(addr)
 
     def init_db(self):
         return []
@@ -85,7 +79,7 @@ class LogServer(EEPKIElement):
         root, entries_no = self.log.get_root_entries()
         root_idx = len(self.signed_roots)
         self.signed_roots.append(SignedRoot.from_values(root, root_idx, entries_no,
-                                                        self.log_id, self.privkey))
+                                                        self.conf.my_id, self.conf.privkey))
 
     def handle_msg_meta(self, msg, meta):
         """
@@ -135,7 +129,7 @@ class LogServer(EEPKIElement):
     @try_lock
     def handle_update_request(self, msg, meta):
         msg.entries = self.log.cons_tree.entries[msg.entry_from:msg.entry_to]
-        msg.log_id = self.log_id
+        msg.log_id = self.conf.my_id
         self.send_meta(msg, meta)
 
     @try_lock
@@ -218,7 +212,7 @@ class LogServer(EEPKIElement):
 
     def accept(self, obj, meta):
         hash_ = hash_function(obj.pack()).digest()
-        msg = AcceptMsg.from_values(hash_, self.privkey)
+        msg = AcceptMsg.from_values(hash_, self.conf.privkey)
         self.send_meta(msg, meta)
 
     def worker(self):
@@ -247,12 +241,15 @@ class LogServer(EEPKIElement):
             name="LogServer.worker", daemon=True).start()
         super().run()
 
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("%s <ISD-AS> <IP>" % sys.argv[0])
-        # PYTHONPATH=..:../scion python3 log/server.py 1-17 127.1.1.1
+    if len(sys.argv) != 2:
+        print("%s log_id" % sys.argv[0])
+        # PYTHONPATH=..:../scion python3 log/server.py log1
         sys.exit(-1)
-    addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
-    log_serv = LogServer(addr)
+    id_ = sys.argv[1]
+    conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE
+    priv_key_file = OUTPUT_DIR + CONF_DIR + id_ + ".priv"
+    log_serv = LogServer(conf_file, priv_key_file, id_)
     print("running log")
     log_serv.run()
