@@ -18,15 +18,22 @@ import sys
 from merkle import hash_function
 
 from pki.lib.cert import MSC, SCP, Revocation
-from pki.lib.defines import EEPKI_PORT, EEPKIError, EEPKIValidationError
+from pki.lib.defines import (
+    CONF_DIR,
+    CONF_FILE,
+    EEPKI_PORT,
+    EEPKIError,
+    EEPKIValidationError,
+    OUTPUT_DIR,
+)
 from pki.lib.msg import *
 from pki.lib.tree_entries import (
     MSCEntry,
     RevocationEntry,
     SCPEntry,
-    )
+)
+from pki.log.conf import Conf
 from pki.log.monitor import LogMonitor
-from pki.log.server import PUB_KEY
 
 import lib.app.sciond as lib_sciond
 from lib.tcp.socket import SCIONTCPSocket
@@ -37,18 +44,19 @@ from test.integration.base_cli_srv import get_sciond_api_addr
 
 
 class LogClient(object):
-    def __init__(self, addr):
+    def __init__(self, addr, conf_file):
         self.addr = addr
         self.sock = None
-        self.pubkey = None  # Log's public key
+        self.pubkey = None  # Log/Monitor's public key
+        self.conf = Conf(conf_file)
 
-    def connect(self, src_addr, pubkey):
-        self.pubkey = pubkey
+    def connect(self, dst_id):
+        dst_addr, self.pubkey = self.conf.get_addr_pubkey(dst_id)
         self.sock = SCIONTCPSocket()
         self.sock.bind((self.addr, 0))
-        path_info = self.get_paths_info(src_addr.isd_as)
+        path_info = self.get_paths_info(dst_addr.isd_as)
         if path_info:
-            self.sock.connect(src_addr, EEPKI_PORT, *path_info[0])
+            self.sock.connect(dst_addr, EEPKI_PORT, *path_info[0])
 
     def get_paths_info(self, dst_isd_as):
         lib_sciond.init(get_sciond_api_addr(self.addr))
@@ -141,22 +149,22 @@ class LogClient(object):
             raise EEPKIError(msg.description)
         raise EEPKIError("Unsupported response")
 
+
 if __name__ == "__main__":
-    if len(sys.argv) != 7:
-        print("%s <srcISD-AS> <srcIP> <logISD-AS> <logIP> <monISD-AS> <monIP>" % sys.argv[0])
-        # PYTHONPATH=..:../scion python3 log/client.py 2-25 127.2.2.2 1-17 127.1.1.1 1-17 127.3.4.5
+    if len(sys.argv) < 5:
+        print("%s <srcISD-AS> <srcIP> <log_id> <monitor_id> [<monitor_id> ...]" % sys.argv[0])
+        # PYTHONPATH=..:../scion python3 log/client.py 2-25 127.2.2.2 log1 monitor1 monitor2 monitor3
         sys.exit(-1)
-    cli_addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
+    addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
+    conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE
     # start client
-    cli = LogClient(cli_addr)
+    cli = LogClient(addr, conf_file)
     # connect to a log and get its root
-    log_addr = SCIONAddr.from_values(ISD_AS(sys.argv[3]), haddr_parse(1, sys.argv[4]))
-    cli.connect(log_addr, PUB_KEY)
+    cli.connect(sys.argv[3])
     root = cli.get_root()
     cli.close()
-    # connect to a monitor and confirm the root
-    mon_addr = SCIONAddr.from_values(ISD_AS(sys.argv[5]), haddr_parse(1, sys.argv[6]))
-    monitor_pubkey = b'5w\x9c\xb6\xa1\xef\x8a\x95\xfd\x8d\xd6\x9bd\xbd\x1a\x9aN\r\xcaj6i=\xe2\xb1\xbe\xad\xe9\xad\x94\xc1\x00'
-    cli.connect(mon_addr, monitor_pubkey)
-    print(cli.confirm_root(root))
-    cli.close()
+    # connect to monitor(s) and confirm the root
+    for monitor_id in sys.argv[4:]:
+        cli.connect(monitor_id)
+        print(cli.confirm_root(root))
+        cli.close()

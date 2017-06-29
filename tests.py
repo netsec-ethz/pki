@@ -25,12 +25,12 @@ from collections import defaultdict
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
-from pki.generate import OUTPUT_DIR
+from pki.generate import CONF_DIR, CONF_FILE, OUTPUT_DIR
 from pki.lib.defines import EEPKIError, SecLevel, ValidationResult
 from pki.lib.cert import MSC, SCP
 from pki.log.log import Log
 from pki.log.client import LogClient
-from pki.log.server import LogServer, PUB_KEY
+from pki.log.server import LogServer
 from pki.lib.verifier import verify
 from pki.lib.x509 import certs_to_pem, pem_to_certs
 from pki.lib.trees import *
@@ -180,9 +180,10 @@ def test_cli_srv(mscs, scps):
     srv_addr = SCIONAddr.from_values(ISD_AS("1-17"), haddr_parse(1, "127.1.1.1"))
     # log_serv = LogServer(srv_addr)
     # threading.Thread(target=log_serv.run, name="LogServer", daemon=True).start()
-    cli = LogClient(cli_addr)
+    conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE
+    cli = LogClient(cli_addr, conf_file)
     time.sleep(1)
-    cli.connect(srv_addr, PUB_KEY)
+    cli.connect("log1")
     print("Log started and client connected")
     all_ = scps + mscs
     random.shuffle(all_)

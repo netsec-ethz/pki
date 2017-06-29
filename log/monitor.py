@@ -260,7 +260,7 @@ class LogMonitor(EEPKIElement):
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("%s monitor_id" % sys.argv[0])
-        # PYTHONPATH=..:../scion python3 log/monitor.py 1-17 127.3.4.5
+        # PYTHONPATH=..:../scion python3 log/monitor.py monitor1
         sys.exit(-1)
     id_ = sys.argv[1]
     conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE
