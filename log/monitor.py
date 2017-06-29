@@ -63,7 +63,6 @@ class LogMonitor(EEPKIElement):
 
     def init_logs(self):
         for log_id in self.conf.logs:
-            log_id = "log1"
             self.logs[log_id] = Log()
             self.log2lock[log_id] = threading.Lock()
             self.signed_roots[log_id] = {}
@@ -225,7 +224,7 @@ class LogMonitor(EEPKIElement):
             self.ask_for_roots()
 
     def ask_for_roots(self):
-        for tmp in [self.conf.logs["log1"]]: #self.conf.logs.values():
+        for tmp in self.conf.logs.values():
             req = SignedRoot()
             path = self.get_path(tmp.addr.isd_as)
             if not path:
