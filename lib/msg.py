@@ -41,8 +41,16 @@ class Message(object):
         return struct.pack("!I", len(raw)) + raw
 
     def __str__(self):
-        return '%s(%s)' % (type(self).__name__,
-                           ', '.join('%s=%s' % item for item in sorted(vars(self).items())))
+        items = []
+        for k, v in sorted(vars(self).items()):
+            if isinstance(v, bytes) or isinstance(v, str):
+                if len(v) > 15:
+                    try:
+                        v = v[:15] + b"..."
+                    except TypeError:
+                        v = v[:15] + "..."
+            items.append('%s=%s' % (k, v))
+        return '%s(%s)' % (type(self).__name__, ', '.join(items))
 
     def __eq__(self, other):
         return self.pack() == other.pack()

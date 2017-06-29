@@ -94,7 +94,7 @@ def gen_config(threshold, log_no, monitor_no):
     for i in range(1, monitor_no + 1):
         monitor_id = "monitor%d" % i
         isd_as = random.choice(ASes)
-        ip = str(ipaddress.ip_address("127.0.1.0") + i)
+        ip = str(ipaddress.ip_address("127.0.2.0") + i)
         pub, priv = generate_sign_keypair()
         dict_["monitors"][monitor_id] = [isd_as, ip, pub]
         with open(CONF_DIR + "%s.priv" % monitor_id, "wb") as f:

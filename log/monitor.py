@@ -38,6 +38,7 @@ import lib.app.sciond as lib_sciond
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
 from lib.thread import thread_safety_net
+from lib.topology import Element
 from lib.util import sleep_interval
 from test.integration.base_cli_srv import get_sciond_api_addr
 
@@ -62,7 +63,6 @@ class LogMonitor(EEPKIElement):
 
     def init_logs(self):
         for log_id in self.conf.logs:
-            log_id = "log1"
             self.logs[log_id] = Log()
             self.log2lock[log_id] = threading.Lock()
             self.signed_roots[log_id] = {}
@@ -224,10 +224,11 @@ class LogMonitor(EEPKIElement):
             self.ask_for_roots()
 
     def ask_for_roots(self):
-        for tmp in [self.conf.logs["log1"]]: #self.conf.logs.values():
+        for tmp in self.conf.logs.values():
             req = SignedRoot()
             path = self.get_path(tmp.addr.isd_as)
-            if not path:
+            if not path and self.addr.isd_as != tmp.addr.isd_as:
+                logging.warning("Cannot get a path to %s" % tmp.addr.isd_as)
                 continue
             meta = self._build_meta(tmp.addr.isd_as, tmp.addr.host, path=path,
                                     port=EEPKI_PORT, reuse=True)
@@ -243,15 +244,23 @@ class LogMonitor(EEPKIElement):
         lib_sciond.init(get_sciond_api_addr(self.addr))
         replies = lib_sciond.get_paths(dst_isd_as)
         if not replies:
-            logging.warning("Cannot get a path to %s" % dst_isd_as)
-            return
-        return replies[0].path().fwd_path()
+            return None
+        # TODO(PSz): Very hacky to avoid changing scion_elem and/or giving topo files for
+        # every element.
+        path = replies[0].path().fwd_path()
+        ifid = path.get_fwd_if()
+        if ifid not in self.ifid2br:
+            br = Element()
+            br.addr = replies[0].first_hop().ipv4()
+            br.port = replies[0].first_hop().p.port
+            self.ifid2br[ifid] = br
+        return path
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("%s monitor_id" % sys.argv[0])
-        # PYTHONPATH=..:../scion python3 log/monitor.py 1-17 127.3.4.5
+        # PYTHONPATH=..:../scion python3 log/monitor.py monitor1
         sys.exit(-1)
     id_ = sys.argv[1]
     conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE

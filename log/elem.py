@@ -47,3 +47,4 @@ class EEPKIElement(SCIONElement):
         self._startup = time.time()
         self._DefaultMeta = TCPMetadata
         self._msg_parser = build_msg
+        self.ifid2br = {}  # FIXME(PSz): that shouldn't be needed
