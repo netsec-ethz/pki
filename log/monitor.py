@@ -227,7 +227,8 @@ class LogMonitor(EEPKIElement):
         for tmp in self.conf.logs.values():
             req = SignedRoot()
             path = self.get_path(tmp.addr.isd_as)
-            if not path:
+            if not path and self.addr.isd_as != tmp.addr.isd_as:
+                logging.warning("Cannot get a path to %s" % tmp.addr.isd_as)
                 continue
             meta = self._build_meta(tmp.addr.isd_as, tmp.addr.host, path=path,
                                     port=EEPKI_PORT, reuse=True)
