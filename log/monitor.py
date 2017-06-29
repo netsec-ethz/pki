@@ -99,7 +99,7 @@ class LogMonitor(EEPKIElement):
             return
         idx = msg.root_idx
         if idx in self.signed_roots[log_id] and msg != self.signed_roots[log_id][idx]:
-            logging.critical("Inconsistent roots: %s\n%s" % msg, self.signed_roots[log_id][idx])
+            logging.critical("Inconsistent roots: %s\n%s" % (msg, self.signed_roots[log_id][idx]))
             return
         self.signed_roots[log_id][idx] = msg
         logging.debug("Received root: %s" % msg)
