@@ -41,7 +41,7 @@ class SCPCache(object):
     def __init__(self, my_id, logs):
         my_addr = None
         peers = []
-        for id_ in logs:
+        for id_ in sorted(logs):  # TODO(PSz): is sorted() needed?
             addr = "%s:%d" % (logs[id_].addr.host, EEPKI_SYNCH_PORT)
             if id_ == my_id:
                 my_addr = addr
