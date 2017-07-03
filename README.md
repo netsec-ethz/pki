@@ -8,6 +8,8 @@ Requirements:
 - pyOpenSSL (apt install python3-openssl)
 - merkle (pip3 install merkle)
 - SCION codebase (https://github.com/netsec-ethz/scion)
+- PySyncObj (git clone https://github.com/bakwc/PySyncObj.git)
+  (TODO(PSz): to be replaced by our fork with TCP/SCION)
 
 
 References:

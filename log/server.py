@@ -26,6 +26,7 @@ from pki.lib.msg import (
     SignedRoot,
     UpdateMsg,
 )
+from pki.lib.scp_cache import SCPCache
 from pki.lib.tree_entries import (
     CertificateEntry,
     MSCEntry,
@@ -71,6 +72,8 @@ class LogServer(EEPKIElement):
         self.revs_to_add = []
         self.signed_roots = []
         self.update_root()
+        # Init replicated cache
+        self.scp_cache = SCPCache(self.conf.my_id, self.conf.logs)
 
     def init_db(self):
         return []
