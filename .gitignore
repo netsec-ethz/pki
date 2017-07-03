@@ -1,0 +1,8 @@
+# Python
+__pycache__/
+
+# Temporary
+tmp/
+
+# ISD files
+/ISD*
