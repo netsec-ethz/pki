@@ -71,7 +71,8 @@ class LogServer(EEPKIElement):
         self.lock = threading.Lock()
         self.revs_to_add = []
         self.mscs_to_add = []
-        self.scps_to_add = []  # TODO(PSz): with the latest change it has to be thread-safe
+        self.scps_to_add_lock = threading.Lock()
+        self.scps_to_add = []
         self.incoming_scps = queue.Queue()
         self.waiting_scps = []  # TODO(PSz): that should be expiring
         self.signed_roots = []
@@ -147,8 +148,6 @@ class LogServer(EEPKIElement):
             self.send_meta(msg, meta)
             return
         self.incoming_scps.put((scp, meta))
-        # self.scps_to_add.append(scp)
-        # self.accept(scp, meta)
 
     def validate_scp(self, scp):
         """
@@ -157,7 +156,9 @@ class LogServer(EEPKIElement):
         # Check whether this SCP is a subsequent (or the first) one
         label = scp.get_domain_name()
         latest = None
-        for tmp in reversed(self.scps_to_add):
+        with self.scps_to_add_lock:
+            reversed_scps = reversed(self.scps_to_add)
+        for tmp in reversed_scps:
             if tmp.get_domain_name() == label:
                 latest = tmp
                 break
@@ -238,12 +239,14 @@ class LogServer(EEPKIElement):
     def update(self):
         with self.lock:
             logging.debug("Starting log update")
-            for entry in self.mscs_to_add + self.scps_to_add + self.revs_to_add:
+            with self.scps_to_add_lock:
+                scps_to_add = self.scps_to_add
+                self.scps_to_add = []
+            for entry in self.mscs_to_add + scps_to_add + self.revs_to_add:
                 self.log.add(entry)
             self.log.build()
             self.update_root()
             self.mscs_to_add = []
-            self.scps_to_add = []
             self.revs_to_add = []
             logging.debug("Log updated")
 
@@ -268,7 +271,8 @@ class LogServer(EEPKIElement):
                 self.send_meta(msg, meta)
                 self.waiting_scps.remove((scp, meta))
                 return
-            self.scps_to_add.append(scp)
+            with self.scps_to_add_lock:
+                self.scps_to_add.append(scp)
             if meta:
                 self.accept(scp, meta)
                 self.waiting_scps.remove((scp, meta))
