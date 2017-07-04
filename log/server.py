@@ -72,7 +72,7 @@ class LogServer(EEPKIElement):
         self.revs_to_add = []
         self.mscs_to_add = []
         self.scps_to_add = []  # TODO(PSz): with the latest change it has to be thread-safe
-        self.incoming_scps = Queue()
+        self.incoming_scps = queue.Queue()
         self.waiting_scps = []  # TODO(PSz): that should be expiring
         self.signed_roots = []
         self.update_root()
@@ -146,7 +146,7 @@ class LogServer(EEPKIElement):
             msg = ErrorMsg.from_values(err)
             self.send_meta(msg, meta)
             return
-        self.incoming_scps.put(scp)
+        self.incoming_scps.put((scp, meta))
         # self.scps_to_add.append(scp)
         # self.accept(scp, meta)
 
@@ -250,9 +250,13 @@ class LogServer(EEPKIElement):
     def handle_scps(self):
         # First, drain the queue and replicate the elements
         while not self.incoming_scps.empty():
-            self.scp_cache.add(self.incoming_scps.get_nowait())
+            scp, meta = self.incoming_scps.get_nowait()
+            logging.debug("Replicating SCP")
+            self.scp_cache.add(scp)
             self.waiting_scps.append((scp, meta))
         scps = self.scp_cache.get_new()
+        if scps:
+            logging.debug("New replicated SCPs: %d" % len(scps))
         for scp in scps:
             meta = self.get_meta_for_scp(scp) 
             err = self.validate_scp(scp)
@@ -271,7 +275,7 @@ class LogServer(EEPKIElement):
 
     def get_meta_for_scp(self, scp):
         for scp_wait, meta in self.waiting_scps:
-            if scp.pack() == scp_wait.pack():
+            if scp == scp_wait:
                 return meta
         return None
 

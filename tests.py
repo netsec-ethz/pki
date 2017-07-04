@@ -177,8 +177,6 @@ def test_cli_srv(mscs, scps):
     print("\nStarting client-server test. SCION must be running!!!")
     # First init server and client and connect
     cli_addr = SCIONAddr.from_values(ISD_AS("2-25"), haddr_parse(1, "127.2.2.2"))
-    srv_addr = SCIONAddr.from_values(ISD_AS("1-17"), haddr_parse(1, "127.1.1.1"))
-    # log_serv = LogServer(srv_addr)
     # threading.Thread(target=log_serv.run, name="LogServer", daemon=True).start()
     conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE
     cli = LogClient(cli_addr, conf_file)
@@ -193,6 +191,7 @@ def test_cli_srv(mscs, scps):
 def load_mscs_scps():
     mscs = {}
     scps = {}
+    old_dir = os.getcwd()
     os.chdir(OUTPUT_DIR)
     for name in glob.glob("*.msc"):
         domain_name = name[:-4]
@@ -208,6 +207,7 @@ def load_mscs_scps():
         scp = SCP(SCP(pem).pack())
         scps[domain_name] = scp
         assert scp.pack() == pem, "parse()/pack() failed"
+    os.chdir(old_dir)
     return mscs, scps
 
 

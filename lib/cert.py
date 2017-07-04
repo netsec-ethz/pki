@@ -61,6 +61,9 @@ class EECert(object):
         # tmp.append("Policy: %s\n" % self.policy)
         return "".join(tmp)
 
+    def __eq__(self, other):
+        # Warning: __eq__() of *Entry objects is implemented differently!
+        return self.pack() == other.pack()
 
 class MSC(EECert):
     """

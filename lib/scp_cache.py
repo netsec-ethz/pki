@@ -14,6 +14,7 @@
 
 from pysyncobj import SyncObj, SyncObjConf, replicated
 
+from .cert import SCP
 from .defines import EEPKI_SYNCH_PORT
 
 
@@ -50,11 +51,13 @@ class SCPCache(object):
         self.list = ReplicatedList(my_addr, peers)
         self.last_idx = 0
 
-    def add(self, scp_raw):
-        self.list.append(scp_raw)
+    def add(self, scp):
+        self.list.append(scp.pack())
 
     def get_new(self):
+        res = []
         len_ = self.list.get_len()
-        res = self.list.get_data()[self.last_idx:]
+        for scp_raw in self.list.get_data()[self.last_idx:]:
+            res.append(SCP(scp_raw))
         self.last_idx = len_
         return res
