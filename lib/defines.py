@@ -14,6 +14,7 @@
 from lib.errors import SCIONBaseError, SCIONVerificationError
 
 EEPKI_PORT = 9088
+EEPKI_SYNCH_PORT = 9089
 DEFAULT_CERT_VALIDITY = 120  # In days.
 POLICY_OID = "1.2.34.56.1"
 POLICY_BINDIND_OID = "1.2.34.56.2"

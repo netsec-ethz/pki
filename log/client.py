@@ -166,5 +166,5 @@ if __name__ == "__main__":
     # connect to monitor(s) and confirm the root
     for monitor_id in sys.argv[4:]:
         cli.connect(monitor_id)
-        print(cli.confirm_root(root))
+        print(cli.confirm_root(root), end="\n\n")
         cli.close()

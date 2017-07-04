@@ -13,6 +13,7 @@
 # limitations under the License.
 import logging
 import sys
+import queue
 import time
 import threading
 from merkle import hash_function
@@ -26,6 +27,7 @@ from pki.lib.msg import (
     SignedRoot,
     UpdateMsg,
 )
+from pki.lib.scp_cache import SCPCache
 from pki.lib.tree_entries import (
     CertificateEntry,
     MSCEntry,
@@ -59,6 +61,7 @@ def try_lock(handler):
 
 class LogServer(EEPKIElement):
     UPDATE_INTERVAL = 10  # FIXME(PSz): so low for testing
+    WORKER_INTERVAL = 0.1
     def __init__(self, conf_file, priv_key_file, my_id):
         # Init configuration and network
         super().__init__(conf_file, priv_key_file, my_id)
@@ -66,11 +69,15 @@ class LogServer(EEPKIElement):
         entries = self.init_db()
         self.log = Log(entries)
         self.lock = threading.Lock()
-        self.mscs_to_add = []
-        self.scps_to_add = []
         self.revs_to_add = []
+        self.mscs_to_add = []
+        self.scps_to_add = []  # TODO(PSz): with the latest change it has to be thread-safe
+        self.incoming_scps = queue.Queue()
+        self.waiting_scps = []  # TODO(PSz): that should be expiring
         self.signed_roots = []
         self.update_root()
+        # Init replicated cache
+        self.scp_cache = SCPCache(self.conf.my_id, self.conf.logs)
 
     def init_db(self):
         return []
@@ -139,8 +146,9 @@ class LogServer(EEPKIElement):
             msg = ErrorMsg.from_values(err)
             self.send_meta(msg, meta)
             return
-        self.scps_to_add.append(scp)
-        self.accept(scp, meta)
+        self.incoming_scps.put((scp, meta))
+        # self.scps_to_add.append(scp)
+        # self.accept(scp, meta)
 
     def validate_scp(self, scp):
         """
@@ -217,11 +225,15 @@ class LogServer(EEPKIElement):
 
     def worker(self):
         start = time.time()
+        last_update = start
         while self.run_flag.is_set():
-            sleep_interval(start, self.UPDATE_INTERVAL, "LogServer.worker sleep",
+            sleep_interval(start, self.WORKER_INTERVAL, "LogServer.worker sleep",
                            self._quiet_startup())
+            if time.time() - last_update > self.UPDATE_INTERVAL:
+                self.update()
+                last_update = time.time()
+            self.handle_scps()
             start = time.time()
-            self.update()
 
     def update(self):
         with self.lock:
@@ -234,6 +246,38 @@ class LogServer(EEPKIElement):
             self.scps_to_add = []
             self.revs_to_add = []
             logging.debug("Log updated")
+
+    def handle_scps(self):
+        # First, drain the queue and replicate the elements
+        while not self.incoming_scps.empty():
+            scp, meta = self.incoming_scps.get_nowait()
+            logging.debug("Replicating SCP")
+            self.scp_cache.add(scp)
+            self.waiting_scps.append((scp, meta))
+        scps = self.scp_cache.get_new()
+        if scps:
+            logging.debug("New replicated SCPs: %d" % len(scps))
+        for scp in scps:
+            meta = self.get_meta_for_scp(scp) 
+            err = self.validate_scp(scp)
+            if err:
+                if not meta:
+                    logging.error("Cannot validate SCP: %s\n%s" % (err, scp))
+                    return
+                msg = ErrorMsg.from_values(err)
+                self.send_meta(msg, meta)
+                self.waiting_scps.remove((scp, meta))
+                return
+            self.scps_to_add.append(scp)
+            if meta:
+                self.accept(scp, meta)
+                self.waiting_scps.remove((scp, meta))
+
+    def get_meta_for_scp(self, scp):
+        for scp_wait, meta in self.waiting_scps:
+            if scp == scp_wait:
+                return meta
+        return None
 
     def run(self):
         threading.Thread(
