@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+echo
+echo "Make sure that SCION infrastructure is running!!"
 # start logs
 PYTHONPATH=..:../scion python3 log/server.py log1 >/dev/null 2>&1 &
 PYTHONPATH=..:../scion python3 log/server.py log2 >/dev/null 2>&1 &

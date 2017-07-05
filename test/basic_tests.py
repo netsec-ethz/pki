@@ -25,7 +25,6 @@ from collections import defaultdict
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
-from pki.generate import CONF_DIR, CONF_FILE, OUTPUT_DIR
 from pki.lib.defines import EEPKIError, SecLevel, ValidationResult
 from pki.lib.cert import MSC, SCP
 from pki.log.conf import Conf
@@ -38,6 +37,7 @@ from pki.lib.x509 import certs_to_pem, pem_to_certs
 from pki.lib.trees import *
 from pki.lib.tree_entries import *
 from pki.lib.tree_proofs import EEPKIProof
+from pki.test.generate import CONF_DIR, CONF_FILE, OUTPUT_DIR
 
 # SCION
 from lib.crypto.trc import TRC

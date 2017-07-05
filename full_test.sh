@@ -12,5 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-PYTHONPATH=..:../scion python3 ./generate.py
-PYTHONPATH=..:../scion python3 ./tests.py ISD1-V0.trc
+PYTHONPATH=..:../scion python3 ./test/generate.py
+PYTHONPATH=..:../scion python3 ./test/basic_tests.py ISD1-V0.trc
+sh ./test/infrastructure_test.sh
