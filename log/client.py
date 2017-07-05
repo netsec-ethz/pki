@@ -183,10 +183,8 @@ if __name__ == "__main__":
     all_ = scps + mscs
     random.shuffle(all_)
     print("Submitting SCPs and MSCs to %s" % rnd_log)
-    i = 1
     for obj in all_:
-        print(i, cli.submit(obj))
-        i += 1
+        print(cli.submit(obj))
     cli.close()
     # take every log's root (in random order) and confirm it by all monitors (in random order)
     logs = list(cli.conf.logs)
