@@ -149,22 +149,49 @@ class LogClient(object):
             raise EEPKIError(msg.description)
         raise EEPKIError("Unsupported response")
 
+    def get_and_confirm_root(self, log_id, monitors):
+        # connect to a log and get its root
+        cli.connect(log_id)
+        root = cli.get_root()
+        cli.close()
+        # connect to monitor(s) and confirm the root
+        for monitor_id in monitors:
+            cli.connect(monitor_id)
+            print(cli.confirm_root(root), end="\n\n")
+            cli.close()
+
 
 if __name__ == "__main__":
-    if len(sys.argv) < 5:
+    if len(sys.argv) != 3:
         print("%s <srcISD-AS> <srcIP> <log_id> <monitor_id> [<monitor_id> ...]" % sys.argv[0])
         # PYTHONPATH=..:../scion python3 log/client.py 2-25 127.2.2.2 log1 monitor1 monitor2 monitor3
         sys.exit(-1)
+
+    import random
+    from pki.test.basic_tests import load_mscs_scps
     addr = SCIONAddr.from_values(ISD_AS(sys.argv[1]), haddr_parse(1, sys.argv[2]))
     conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE
     # start client
     cli = LogClient(addr, conf_file)
-    # connect to a log and get its root
-    cli.connect(sys.argv[3])
-    root = cli.get_root()
+    # take sample MSCs and SCPs and try to register them with random log
+    mscs, scps = load_mscs_scps()
+    mscs = list(mscs.values())
+    scps = list(scps.values())
+    rnd_log = random.choice(list(cli.conf.logs))
+    print("Connecting to %s" % rnd_log)
+    cli.connect(rnd_log)
+    all_ = scps + mscs
+    random.shuffle(all_)
+    print("Submitting SCPs and MSCs to %s" % rnd_log)
+    i = 1
+    for obj in all_:
+        print(i, cli.submit(obj))
+        i += 1
     cli.close()
-    # connect to monitor(s) and confirm the root
-    for monitor_id in sys.argv[4:]:
-        cli.connect(monitor_id)
-        print(cli.confirm_root(root), end="\n\n")
-        cli.close()
+    # take every log's root (in random order) and confirm it by all monitors (in random order)
+    logs = list(cli.conf.logs)
+    random.shuffle(logs)
+    monitors = list(cli.conf.monitors)
+    random.shuffle(monitors)
+    for log_id in logs: 
+        cli.get_and_confirm_root(log_id, monitors)
