@@ -28,8 +28,10 @@ from cryptography.hazmat.primitives import hashes, serialization
 from pki.generate import CONF_DIR, CONF_FILE, OUTPUT_DIR
 from pki.lib.defines import EEPKIError, SecLevel, ValidationResult
 from pki.lib.cert import MSC, SCP
+from pki.log.conf import Conf
 from pki.log.log import Log
 from pki.log.client import LogClient
+from pki.log.monitor import LogMonitor
 from pki.log.server import LogServer
 from pki.lib.verifier import verify
 from pki.lib.x509 import certs_to_pem, pem_to_certs
@@ -58,6 +60,28 @@ def random_domain_names(level=3, per_level=2, length=2):
         res += names[i]
     random.shuffle(res)
     return res
+
+def load_mscs_scps():
+    mscs = {}
+    scps = {}
+    old_dir = os.getcwd()
+    os.chdir(OUTPUT_DIR)
+    for name in glob.glob("*.msc"):
+        domain_name = name[:-4]
+        # Load MSC
+        with open(name, "rb") as f:
+            pem = f.read()
+        msc = MSC(MSC(pem).pack())
+        mscs[domain_name] = msc
+        assert msc.pack() == pem, "parse()/pack() failed"
+        # and corresponding SCP
+        with open(domain_name + ".scp", "rb") as f:
+            pem = f.read()
+        scp = SCP(SCP(pem).pack())
+        scps[domain_name] = scp
+        assert scp.pack() == pem, "parse()/pack() failed"
+    os.chdir(old_dir)
+    return mscs, scps
 
 def verifier(msc, scp, trc, domain_name, sec_lvl=SecLevel.MEDIUM):
     # take trusted_certs as union of TRCs and policy
@@ -143,22 +167,6 @@ def test_proofs(log, mscs, scps):
         # Test proof packing/parsing
         assert EEPKIProof(proof.pack()).pack() == proof.pack()
 
-def prepare(msc, scp):
-    scps = []
-    mscs = []
-    domain_names = random_domain_names(level=5)
-    for i in domain_names:
-        tmp = copy.copy(scp)
-        tmp.pem = b"SCPpem: %s" % bytes(i, "utf-8")
-        tmp.domain_name = i
-        scps.append(tmp)
-        #
-        tmp = copy.copy(msc)
-        tmp.pem = b"MSCpem: %s" % bytes(i, "utf-8")
-        tmp.domain_name = i
-        mscs.append(tmp)
-    return mscs, scps
-
 def test_log_local(mscs, scps):
     print("Starting log and building trees")
     log = Log()
@@ -173,42 +181,50 @@ def test_log_local(mscs, scps):
     assert log.policy_tree.get_root() == Log(all_).policy_tree.get_root()
     return log
 
-def test_cli_srv(mscs, scps):
-    print("\nStarting client-server test. SCION must be running!!!")
-    # First init server and client and connect
-    cli_addr = SCIONAddr.from_values(ISD_AS("2-25"), haddr_parse(1, "127.2.2.2"))
-    # threading.Thread(target=log_serv.run, name="LogServer", daemon=True).start()
+def test_infrastructure(mscs, scps):
+    print("\nStarting infrastructure test. SCION must be running!!!")
+    # First read configuration
     conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE
+    conf = Conf(conf_file)
+    # next, run log servers
+    for id_ in conf.logs:
+        priv_key_file = OUTPUT_DIR + CONF_DIR + id_ + ".priv"
+        log_serv = LogServer(conf_file, priv_key_file, id_)
+        threading.Thread(target=log_serv.run, name="LogServer", daemon=True).start()
+        time.sleep(0.2)
+        print("Starting: %s" % id_)
+    # and monitors
+    for id_ in conf.monitors:
+        priv_key_file = OUTPUT_DIR + CONF_DIR + id_ + ".priv"
+        monitor = LogMonitor(conf_file, priv_key_file, id_)
+        threading.Thread(target=monitor.run, name="LogMonitor", daemon=True).start()
+        print("Starting: %s" % id_)
+        time.sleep(1)
+    # finally, start client
+    cli_addr = SCIONAddr.from_values(ISD_AS("2-25"), haddr_parse(1, "127.2.2.2"))
     cli = LogClient(cli_addr, conf_file)
-    time.sleep(1)
-    cli.connect("log1")
-    print("Log started and client connected")
+    rnd_log = random.choice(list(conf.logs))
+    print("Connecting to %s" % rnd_log)
+    cli.connect(rnd_log)
     all_ = scps + mscs
     random.shuffle(all_)
+    print("Submitting SCPs and MSCs to %s" % rnd_log)
+    i = 1
     for obj in all_:
-        print(cli.submit(obj))
-
-def load_mscs_scps():
-    mscs = {}
-    scps = {}
-    old_dir = os.getcwd()
-    os.chdir(OUTPUT_DIR)
-    for name in glob.glob("*.msc"):
-        domain_name = name[:-4]
-        # Load MSC
-        with open(name, "rb") as f:
-            pem = f.read()
-        msc = MSC(MSC(pem).pack())
-        mscs[domain_name] = msc
-        assert msc.pack() == pem, "parse()/pack() failed"
-        # and corresponding SCP
-        with open(domain_name + ".scp", "rb") as f:
-            pem = f.read()
-        scp = SCP(SCP(pem).pack())
-        scps[domain_name] = scp
-        assert scp.pack() == pem, "parse()/pack() failed"
-    os.chdir(old_dir)
-    return mscs, scps
+        print(i, cli.submit(obj))
+        i += 1
+    cli.close()
+    # Now take a root of every log and confirm it by every monitor
+    for log_id in conf.logs:
+        print("Connecting to %s" % log_id)
+        cli.connect(log_id)
+        root = cli.get_root()
+        cli.close()
+        for monitor_id in conf.monitors:
+            print("Connecting to %s" % monitor_id)
+            cli.connect(monitor_id)
+            print(cli.confirm_root(root), end="\n\n")
+            cli.close()
 
 
 if __name__ == "__main__":
@@ -234,4 +250,4 @@ if __name__ == "__main__":
     # Test proofs
     test_proofs(log, mscsl, scpsl)
     # Test log with network
-    test_cli_srv(mscsl, scpsl)
+    test_infrastructure(mscsl, scpsl)
