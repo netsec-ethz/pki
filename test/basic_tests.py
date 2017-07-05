@@ -181,51 +181,6 @@ def test_log_local(mscs, scps):
     assert log.policy_tree.get_root() == Log(all_).policy_tree.get_root()
     return log
 
-def test_infrastructure(mscs, scps):
-    print("\nStarting infrastructure test. SCION must be running!!!")
-    # First read configuration
-    conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE
-    conf = Conf(conf_file)
-    # next, run log servers
-    for id_ in conf.logs:
-        priv_key_file = OUTPUT_DIR + CONF_DIR + id_ + ".priv"
-        log_serv = LogServer(conf_file, priv_key_file, id_)
-        threading.Thread(target=log_serv.run, name="LogServer", daemon=True).start()
-        time.sleep(0.2)
-        print("Starting: %s" % id_)
-    # and monitors
-    for id_ in conf.monitors:
-        priv_key_file = OUTPUT_DIR + CONF_DIR + id_ + ".priv"
-        monitor = LogMonitor(conf_file, priv_key_file, id_)
-        threading.Thread(target=monitor.run, name="LogMonitor", daemon=True).start()
-        print("Starting: %s" % id_)
-        time.sleep(1)
-    # finally, start client
-    cli_addr = SCIONAddr.from_values(ISD_AS("2-25"), haddr_parse(1, "127.2.2.2"))
-    cli = LogClient(cli_addr, conf_file)
-    rnd_log = random.choice(list(conf.logs))
-    print("Connecting to %s" % rnd_log)
-    cli.connect(rnd_log)
-    all_ = scps + mscs
-    random.shuffle(all_)
-    print("Submitting SCPs and MSCs to %s" % rnd_log)
-    i = 1
-    for obj in all_:
-        print(i, cli.submit(obj))
-        i += 1
-    cli.close()
-    # Now take a root of every log and confirm it by every monitor
-    for log_id in conf.logs:
-        print("Connecting to %s" % log_id)
-        cli.connect(log_id)
-        root = cli.get_root()
-        cli.close()
-        for monitor_id in conf.monitors:
-            print("Connecting to %s" % monitor_id)
-            cli.connect(monitor_id)
-            print(cli.confirm_root(root), end="\n\n")
-            cli.close()
-
 
 if __name__ == "__main__":
     # PYTHONPATH=..:../scion ./tests.py tmp/msc.cert tmp/scp.cert ISD1-V0.trc
@@ -249,5 +204,3 @@ if __name__ == "__main__":
     log = test_log_local(mscsl, scpsl)
     # Test proofs
     test_proofs(log, mscsl, scpsl)
-    # Test log with network
-    test_infrastructure(mscsl, scpsl)
