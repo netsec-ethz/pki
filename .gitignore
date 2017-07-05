@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+
+# Temporary
+tmp/
+
+# ISD files
+/ISD*
+
+# Vim-generated files
+.*.sw?
