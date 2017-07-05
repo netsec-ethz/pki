@@ -6,3 +6,6 @@ tmp/
 
 # ISD files
 /ISD*
+
+# Vim-generated files
+.*.sw?
