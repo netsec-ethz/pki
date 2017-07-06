@@ -36,11 +36,11 @@ from pki.log.conf import Conf
 from pki.log.monitor import LogMonitor
 
 import lib.app.sciond as lib_sciond
+from integration.base_cli_srv import get_sciond_api_addr
 from lib.tcp.socket import SCIONTCPSocket
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
 from lib.util import recv_all
-from test.integration.base_cli_srv import get_sciond_api_addr
 
 
 class LogClient(object):
@@ -164,7 +164,7 @@ class LogClient(object):
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("%s <srcISD-AS> <srcIP> <log_id> <monitor_id> [<monitor_id> ...]" % sys.argv[0])
-        # PYTHONPATH=..:../scion python3 log/client.py 2-25 127.2.2.2 log1 monitor1 monitor2 monitor3
+        # PYTHONPATH=..:../scion/python python3 log/client.py 2-25 127.2.2.2 log1 monitor1 monitor2 monitor3
         sys.exit(-1)
 
     import random
@@ -183,10 +183,8 @@ if __name__ == "__main__":
     all_ = scps + mscs
     random.shuffle(all_)
     print("Submitting SCPs and MSCs to %s" % rnd_log)
-    i = 1
     for obj in all_:
-        print(i, cli.submit(obj))
-        i += 1
+        print(cli.submit(obj))
     cli.close()
     # take every log's root (in random order) and confirm it by all monitors (in random order)
     logs = list(cli.conf.logs)

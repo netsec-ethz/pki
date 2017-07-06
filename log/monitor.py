@@ -35,12 +35,12 @@ from pki.log.log import Log
 
 # SCION
 import lib.app.sciond as lib_sciond
+from integration.base_cli_srv import get_sciond_api_addr
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
 from lib.thread import thread_safety_net
 from lib.topology import Element
 from lib.util import sleep_interval
-from test.integration.base_cli_srv import get_sciond_api_addr
 
 
 class LogMonitor(EEPKIElement):
@@ -256,11 +256,16 @@ class LogMonitor(EEPKIElement):
             self.ifid2br[ifid] = br
         return path
 
+    # PSz: overwritten to avoid giving topo files for every EEPKI element.
+    def get_border_addr(self, ifid):
+        br = self.ifid2br[ifid]
+        return br.addr, br.port
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("%s monitor_id" % sys.argv[0])
-        # PYTHONPATH=..:../scion python3 log/monitor.py monitor1
+        # PYTHONPATH=..:../scion:../scion:../scion/python python3 log/monitor.py monitor1
         sys.exit(-1)
     id_ = sys.argv[1]
     conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE

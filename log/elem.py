@@ -20,7 +20,7 @@ from pki.lib.defines import EEPKI_PORT
 from pki.lib.msg import build_msg
 from pki.log.conf import Conf
 
-from infrastructure.scion_elem import SCIONElement
+from scion_elem.scion_elem import SCIONElement
 from lib.socket import SocketMgr
 from lib.msg_meta import TCPMetadata
 
@@ -43,8 +43,10 @@ class EEPKIElement(SCIONElement):
         self.stopped_flag.clear()
         self._in_buf = queue.Queue()
         self._socks = SocketMgr()
+        self.bind = None
         self._setup_sockets(True)
         self._startup = time.time()
         self._DefaultMeta = TCPMetadata
         self._msg_parser = build_msg
         self.ifid2br = {}  # FIXME(PSz): that shouldn't be needed
+        self._labels = None

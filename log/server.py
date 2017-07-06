@@ -293,7 +293,7 @@ class LogServer(EEPKIElement):
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("%s log_id" % sys.argv[0])
-        # PYTHONPATH=..:../scion python3 log/server.py log1
+        # PYTHONPATH=..:../scion:../scion/python python3 log/server.py log1
         sys.exit(-1)
     id_ = sys.argv[1]
     conf_file = OUTPUT_DIR + CONF_DIR + CONF_FILE

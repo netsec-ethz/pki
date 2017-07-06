@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cbor
+from nacl.signing import SigningKey
 
 from lib.packet.host_addr import haddr_parse
 from lib.packet.scion_addr import ISD_AS, SCIONAddr
@@ -42,7 +43,7 @@ class Conf(object):
         self.privkey = None
         if privkey_file:
             with open(privkey_file, "rb") as f:
-                self.privkey = f.read()
+                self.privkey = SigningKey(f.read())
 
     def get_addr(self, id_=None):
         if id_ is None:
