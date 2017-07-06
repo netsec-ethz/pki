@@ -7,9 +7,10 @@ Requirements:
 - cryptography.io (pip3 install cryptography)
 - pyOpenSSL (apt install python3-openssl)
 - merkle (pip3 install merkle)
-- SCION codebase (https://github.com/netsec-ethz/scion)
 - PySyncObj (pip3 install pysyncobj)
   (TODO(PSz): to be replaced by our fork with TCP/SCION)
+- SCION codebase (currently, SCION with TCP support is at
+  https://github.com/pszalach/scion/tree/tcp_fixes2)
 
 
 References:

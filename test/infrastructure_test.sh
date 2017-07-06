@@ -16,16 +16,16 @@
 echo
 echo "Make sure that SCION infrastructure is running!!"
 # start logs
-PYTHONPATH=..:../scion python3 log/server.py log1 >/dev/null 2>&1 &
-PYTHONPATH=..:../scion python3 log/server.py log2 >/dev/null 2>&1 &
-PYTHONPATH=..:../scion python3 log/server.py log3 >/dev/null 2>&1 &
+PYTHONPATH=..:../scion:../scion/python python3 log/server.py log1 >/dev/null 2>&1 &
+PYTHONPATH=..:../scion:../scion/python python3 log/server.py log2 >/dev/null 2>&1 &
+PYTHONPATH=..:../scion:../scion/python python3 log/server.py log3 >/dev/null 2>&1 &
 sleep 1
 # and monitors
-PYTHONPATH=..:../scion python3 log/monitor.py monitor1 >/dev/null 2>&1 &
-PYTHONPATH=..:../scion python3 log/monitor.py monitor2 >/dev/null 2>&1 &
-PYTHONPATH=..:../scion python3 log/monitor.py monitor3 >/dev/null 2>&1 &
+PYTHONPATH=..:../scion:../scion/python python3 log/monitor.py monitor1 >/dev/null 2>&1 &
+PYTHONPATH=..:../scion:../scion/python python3 log/monitor.py monitor2 >/dev/null 2>&1 &
+PYTHONPATH=..:../scion:../scion/python python3 log/monitor.py monitor3 >/dev/null 2>&1 &
 sleep 2
 # run tests with client
-PYTHONPATH=..:../scion python3 log/client.py 2-25 127.2.2.2
+PYTHONPATH=..:../scion:../scion/python python3 log/client.py 2-25 127.2.2.2
 # and kill
 pkill -P $$
