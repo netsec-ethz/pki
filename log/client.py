@@ -151,20 +151,25 @@ class LogClient(object):
 
     def get_and_confirm_root(self, log_id, monitors):
         # connect to a log and get its root
+        print("Connecting to %s" % log_id)
         cli.connect(log_id)
+        print("Connection established")
         root = cli.get_root()
+        print("Obtained root", root)
         cli.close()
         # connect to monitor(s) and confirm the root
         for monitor_id in monitors:
+            print("Connecting to %s" % monitor_id)
             cli.connect(monitor_id)
-            print(cli.confirm_root(root), end="\n\n")
+            print("Connection established")
+            print("Confirmed", cli.confirm_root(root), end="\n\n")
             cli.close()
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("%s <srcISD-AS> <srcIP> <log_id> <monitor_id> [<monitor_id> ...]" % sys.argv[0])
-        # PYTHONPATH=..:../scion/python python3 log/client.py 2-25 127.2.2.2 log1 monitor1 monitor2 monitor3
+        print("%s <srcISD-AS> <srcIP>" % sys.argv[0])
+        # PYTHONPATH=..:../scion:../scion/python python3 log/client.py 2-25 127.2.2.2
         sys.exit(-1)
 
     import random
